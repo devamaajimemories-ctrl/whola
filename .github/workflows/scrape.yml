@@ -1,0 +1,10 @@
+name: Daily Scraper
+on:
+  schedule:
+    - cron: '0 */2 * * *' # Runs every 2 hours
+jobs:
+  trigger-scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Scraper API
+        run: curl "https://your-website-url.com/api/cron/auto-scrape?key=MY_SECRET_KEY"
