@@ -3,7 +3,7 @@ import dbConnect from '@/lib/db';
 import Otp from '@/lib/models/Otp';
 import Seller from '@/lib/models/Seller';
 import User from '@/lib/models/User';
-import { signToken } from '@/lib/auth'; // ✅ Changed: Import signToken instead of createAuthCookie
+import { signToken, createAuthCookie } from '@/lib/auth';
 
 export async function POST(req: Request) {
     try {
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
 
         // 7. Prepare Response
         const redirectUrl = role === 'seller' ? '/seller/dashboard' : '/buyer/dashboard';
-        
+
         const response = NextResponse.json({
             success: true,
             message: "Authentication successful",
@@ -71,14 +71,7 @@ export async function POST(req: Request) {
         });
 
         // 8. Set Secure HTTP-Only Cookie
-        // This manually does what createAuthCookie was supposed to do
-        response.cookies.set('auth_token', token, {
-            httpOnly: true, // JavaScript cannot access this (XSS Protection)
-            secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-            sameSite: 'strict', // CSRF Protection
-            maxAge: 60 * 60 * 24 * 30, // 30 Days
-            path: '/', // Available across the entire site
-        });
+        createAuthCookie(response, token);
 
         return response;
 

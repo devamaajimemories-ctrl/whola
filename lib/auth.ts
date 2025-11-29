@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { NextResponse } from 'next/server';
 
 // 🚨 PRODUCTION FIX: Fail immediately if secrets are missing
 if (!process.env.JWT_SECRET) {
@@ -22,4 +23,15 @@ export async function verifyToken(token: string) {
     } catch (error) {
         return null;
     }
+}
+
+export function createAuthCookie(response: NextResponse, token: string) {
+    response.cookies.set('auth_token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 60 * 60 * 24 * 30, // 30 Days
+        path: '/',
+    });
+    return response;
 }
