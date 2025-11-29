@@ -71,9 +71,9 @@ export async function POST(req: Request) {
         });
 
         // 8. Set Secure HTTP-Only Cookie
-        createAuthCookie(response, token);
+        const finalResponse = createAuthCookie(response, token);
 
-        return response;
+        return finalResponse;
 
     } catch (error: any) {
         console.error("[Auth Error]:", error);
