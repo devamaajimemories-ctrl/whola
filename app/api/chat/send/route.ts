@@ -91,6 +91,10 @@ _Tip: If the link is not clickable, please reply "Hi" to this message._`;
         const buyerName = buyer?.name || "Unknown Buyer";
         const buyerPhone = buyer?.phone || "N/A";
 
+        // Admin monitoring link (no login required)
+        const adminToken = process.env.ADMIN_MONITOR_TOKEN || 'admin123secure';
+        const adminMonitorLink = `${websiteUrl}/admin/monitor?token=${adminToken}&buyerId=${userId}&sellerId=${sellerId}`;
+
         const adminMessage = `👮 *CHAT MONITOR: Buyer → Seller*
 
 📱 *BUYER INFO:*
@@ -103,7 +107,7 @@ _Tip: If the link is not clickable, please reply "Hi" to this message._`;
 
 💬 *MESSAGE:* "${message}"
 
-🔗 *View Chat:* ${chatLink}`;
+🔗 *Monitor Live:* ${adminMonitorLink}`;
 
         sendChatNotification(ADMIN_PHONE, adminMessage);
         console.log(`📨 Admin monitoring notification sent to ${ADMIN_PHONE}`);
