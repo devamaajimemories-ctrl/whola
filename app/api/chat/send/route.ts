@@ -7,6 +7,7 @@ import Chat from '@/lib/models/Chat';
 
 // Direct external bot integration
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
+const ADMIN_PHONE = '8448695809';
 
 async function sendChatNotification(phone: string, message: string) {
     await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
@@ -50,52 +51,51 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // 1. CHECK HISTORY: See if this is the VERY FIRST message
-        const previousMessagesCount = await Chat.countDocuments({
-            sellerId: sellerId,
-            userId: userId
-        });
-
-        const isFirstMessage = previousMessagesCount === 0;
-
-        // 2. Save Message to Database
+        // 1. Save Message to Database
         const newChat = await Chat.create({
             sellerId,
-            userId: userId, 
+            userId: userId,
             sender: sender || 'user',
             message: message,
             isBlocked: false,
             createdAt: new Date()
         });
 
-        // 3. CONDITIONAL NOTIFICATION LOGIC
-        // Only send WhatsApp notification if it is the FIRST message.
-        if (isFirstMessage) {
-            const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL;
-            
-            // This link opens the specific chat on your website
-            const chatLink = `${websiteUrl}/seller/messages?buyerId=${userId}`;
+        // 2. NOTIFICATION LOGIC
+        // Send WhatsApp notification to Seller for EVERY message
+        const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL;
 
-            const whatsappMessage = `📢 *New Buyer Alert!*
-            
-A buyer is interested in your products and has sent a message.
+        // This link opens the specific chat on your website
+        const chatLink = `${websiteUrl}/seller/messages?buyerId=${userId}`;
 
-👤 *Buyer Message:* "${message.substring(0, 100)}..."
+        const whatsappMessage = `📢 *New Message from Buyer!*
+        
+A buyer has sent you a message.
+
+👤 *Buyer Message:* "${message}"
 
 👇 *Click below to Reply & Fix Price:*
 ${chatLink}
 
 _Note: Please continue the conversation on the website to secure the deal._`;
 
-            // Fire and forget (don't await)
-            sendChatNotification(seller.phone, whatsappMessage);
-            
-            console.log(`📨 First message notification sent to ${seller.phone}`);
-        } else {
-            // It's not the first message, so we DO NOT send a notification.
-            // This forces the seller to check the app/website for ongoing chats.
-            console.log(`ziplog: Ongoing conversation. No WhatsApp notification sent.`);
-        }
+        // Fire and forget (don't await) to Seller
+        sendChatNotification(seller.phone, whatsappMessage);
+
+        console.log(`📨 Message notification sent to Seller ${seller.phone}`);
+
+        // 3. ADMIN MONITORING
+        // Send copy to Admin
+        const adminMessage = `👮 *Deal Monitor: Buyer -> Seller*
+
+FROM: Buyer (${userId})
+TO: Seller (${seller.name} - ${seller.phone})
+MESSAGE: "${message}"
+
+LINK: ${chatLink}`;
+
+        sendChatNotification(ADMIN_PHONE, adminMessage);
+        console.log(`📨 Admin monitoring notification sent to ${ADMIN_PHONE}`);
 
         return NextResponse.json({ success: true, data: newChat });
 

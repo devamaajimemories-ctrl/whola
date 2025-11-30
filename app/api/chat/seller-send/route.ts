@@ -4,6 +4,20 @@ import { checkPII } from '@/lib/utils/pii-filter';
 import dbConnect from '@/lib/db';
 import Chat from '@/lib/models/Chat';
 
+// Direct external bot integration
+const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
+const ADMIN_PHONE = '8448695809';
+
+async function sendChatNotification(phone: string, message: string) {
+    await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, message })
+    }).catch(err => {
+        console.error(`❌ External Bot Failed to send chat notification to ${phone}:`, err);
+    });
+}
+
 export async function POST(request: NextRequest) {
     try {
         await dbConnect();
@@ -41,6 +55,16 @@ export async function POST(request: NextRequest) {
             isBlocked: false,
             createdAt: new Date()
         });
+
+        // ADMIN MONITORING
+        // Send copy to Admin
+        const adminMessage = `👮 *Deal Monitor: Seller -> Buyer*
+
+FROM: Seller (${sellerId})
+TO: Buyer (${buyerId})
+MESSAGE: "${message}"`;
+
+        sendChatNotification(ADMIN_PHONE, adminMessage);
 
         return NextResponse.json({ success: true, data: newChat });
 
