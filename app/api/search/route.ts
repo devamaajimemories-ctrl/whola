@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Seller from '@/lib/models/Seller';
-import { scrapeAndSaveSellers } from '@/lib/scraper-service'; // Import the scraper service
+import Product from '@/lib/models/Product'; // Added Import
+import { scrapeAndSaveSellers } from '@/lib/scraper-service';
 
 // Allow up to 60 seconds for scraping operations
 export const maxDuration = 60;
@@ -28,17 +29,30 @@ export async function GET(req: Request) {
         const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const regex = new RegExp(escapedQuery, 'i');
 
-        // Standard Filter
+        // 1. Find IDs of sellers who have matching products
+        const matchingProducts = await Product.find({
+            $or: [
+                { name: regex },
+                { category: regex },
+                { description: regex }
+            ],
+            status: 'APPROVED'
+        }).select('sellerId');
+
+        const sellerIdsFromProducts = matchingProducts.map(p => p.sellerId);
+
+        // 2. Standard Filter (Updated to include product matches)
         const filter = {
             $or: [
                 { name: regex },
                 { category: regex },
                 { tags: { $in: [regex] } },
-                { city: regex }
+                { city: regex },
+                { _id: { $in: sellerIdsFromProducts } } // Include sellers with matching products
             ]
         };
 
-        // 1. Initial Database Search
+        // 3. Database Search
         let sellers = await Seller.find(filter)
             .select('name phone category city tags isVerified')
             .sort({ isVerified: -1, _id: -1 })
@@ -50,7 +64,7 @@ export async function GET(req: Request) {
         // 2. 🚀 JIT SCRAPING LOGIC (If results are low)
         if (total < 5) {
             console.log(`📉 Low results (${total}) for "${query}". Triggering Auto-Scraper...`);
-            
+
             // Construct a specific query for Google Maps
             // If the user's query doesn't have a city, default to "India" or a specific hub
             const locationContext = query.toLowerCase().includes("in ") ? "" : " in India";
@@ -61,14 +75,14 @@ export async function GET(req: Request) {
 
             if (newSellers.length > 0) {
                 console.log(`✅ Scraper found ${newSellers.length} new sellers. Refreshing list...`);
-                
+
                 // Re-run the search to include new data
                 sellers = await Seller.find(filter)
                     .select('name phone category city tags isVerified')
                     .sort({ createdAt: -1 }) // Show newest (scraped) first
                     .skip(skip)
                     .limit(limit);
-                
+
                 total = await Seller.countDocuments(filter);
             }
         }

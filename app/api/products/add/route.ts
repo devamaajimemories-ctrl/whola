@@ -32,9 +32,9 @@ export async function POST(req: Request) {
         // 1. Validate Input
         const validation = productSchema.safeParse(body);
         if (!validation.success) {
-            return NextResponse.json({ 
-                success: false, 
-                error: "Validation Failed", 
+            return NextResponse.json({
+                success: false,
+                error: "Validation Failed",
                 details: validation.error.issues // <--- FIX: Use 'issues' instead of 'errors'
             }, { status: 400 });
         }
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
             category: data.category,
             images: data.images || [],
             specifications: data.specifications || {},
-            status: 'APPROVED' // Default to pending review
+            status: 'APPROVED' // Automatically approved as per user request
         });
 
         // 3. Update Seller Count

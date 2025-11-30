@@ -44,14 +44,14 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
 
     const handleDetectLocation = () => {
         if (!navigator.geolocation) return alert("Geolocation not supported");
-        
+
         setIsLocating(true);
         navigator.geolocation.getCurrentPosition(async (pos) => {
             try {
                 const { latitude, longitude } = pos.coords;
                 const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
                 const data = await res.json();
-                
+
                 const detectedCity = data.address.city || data.address.town || data.address.state_district || data.address.state;
                 if (detectedCity) {
                     setFormData(prev => ({ ...prev, city: detectedCity }));
@@ -196,23 +196,23 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                             </div>
 
                             {/* Quantity & Price Row */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Quantity <span className="text-red-500">*</span></label>
                                     <div className="flex">
-                                        <input 
-                                            type="text" 
-                                            name="quantity" 
-                                            required 
-                                            value={formData.quantity} 
-                                            onChange={handleChange} 
-                                            placeholder="500" 
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-red-500 outline-none border-r-0" 
+                                        <input
+                                            type="text"
+                                            name="quantity"
+                                            required
+                                            value={formData.quantity}
+                                            onChange={handleChange}
+                                            placeholder="500"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-red-500 outline-none border-r-0"
                                         />
-                                        <select 
-                                            name="unit" 
-                                            value={formData.unit} 
-                                            onChange={handleChange} 
+                                        <select
+                                            name="unit"
+                                            value={formData.unit}
+                                            onChange={handleChange}
                                             className="bg-gray-50 border border-gray-300 text-gray-700 rounded-r-lg focus:ring-2 focus:ring-red-500 outline-none px-2 text-sm"
                                         >
                                             <option value="Pieces">Pcs</option>
@@ -224,14 +224,14 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Target Price <span className="text-red-500">*</span></label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         name="estimatedPrice"
-                                        required 
-                                        value={formData.estimatedPrice} 
-                                        onChange={handleChange} 
-                                        placeholder="e.g. ₹50/pc" 
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" 
+                                        required
+                                        value={formData.estimatedPrice}
+                                        onChange={handleChange}
+                                        placeholder="e.g. ₹50/pc"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
                                     />
                                 </div>
                             </div>
@@ -250,7 +250,7 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                             </div>
 
                             {/* Contact Details */}
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Your Name <span className="text-red-500">*</span></label>
                                     <input type="text" name="buyerName" required value={formData.buyerName} onChange={handleChange} placeholder="John Doe" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" />

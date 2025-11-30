@@ -34,6 +34,7 @@ export default function MessagesPage() {
     const [loadingConversations, setLoadingConversations] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [processingId, setProcessingId] = useState<string | null>(null);
+    const [showMobileConversations, setShowMobileConversations] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Logic to find the latest pending seller offer (for the persistent button)
@@ -184,7 +185,10 @@ export default function MessagesPage() {
                         <MessageSquare className="w-6 h-6 mr-2 text-indigo-600" />
                         My Messages (Buyer)
                     </h1>
-                    <button className="text-gray-600 hover:text-indigo-600 lg:hidden">
+                    <button
+                        onClick={() => setShowMobileConversations(!showMobileConversations)}
+                        className="text-gray-600 hover:text-indigo-600 lg:hidden"
+                    >
                         <Menu className="w-6 h-6" />
                     </button>
                 </div>
@@ -192,10 +196,19 @@ export default function MessagesPage() {
 
             <div className="container mx-auto p-4 flex gap-4 flex-1 overflow-hidden">
                 {/* LEFT COLUMN: Conversations List */}
-                <div className="hidden lg:block w-80 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-y-auto flex-shrink-0">
-                    <h2 className="text-lg font-semibold p-4 border-b border-gray-100 text-gray-800">
-                        Active Chats
-                    </h2>
+                <div className={`${showMobileConversations ? 'fixed inset-0 z-50 bg-white' : 'hidden'
+                    } lg:block lg:relative lg:w-80 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-y-auto flex-shrink-0`}>
+                    <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                        <h2 className="text-lg font-semibold text-gray-800">
+                            Active Chats
+                        </h2>
+                        <button
+                            onClick={() => setShowMobileConversations(false)}
+                            className="lg:hidden text-gray-600 hover:text-gray-800"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
                     {loadingConversations ? (
                         <div className="p-4 text-center text-gray-500 flex items-center justify-center">
                             <Loader2 className="animate-spin mr-2 w-4 h-4" /> Loading...
@@ -204,7 +217,10 @@ export default function MessagesPage() {
                         conversations.map((conv) => (
                             <div
                                 key={conv._id}
-                                onClick={() => handleSelectConversation(conv.partnerId)}
+                                onClick={() => {
+                                    handleSelectConversation(conv.partnerId);
+                                    setShowMobileConversations(false);
+                                }}
                                 className={`flex items-center p-4 cursor-pointer border-b border-gray-100 transition-colors ${conv.partnerId === selectedSellerId ? 'bg-indigo-50 border-r-4 border-indigo-600' : 'hover:bg-gray-50'
                                     }`}
                             >
@@ -303,13 +319,13 @@ export default function MessagesPage() {
                             </div>
 
                             {/* Input Area (MODIFIED: Removed old Propose button, added dynamic Approve & Pay button) */}
-                            <div className="p-4 bg-white border-t border-gray-100 flex gap-2 items-center">
+                            <div className="p-4 bg-white border-t border-gray-100 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
                                 {/* NEW PERSISTENT BUTTON - Only shows if a PENDING seller offer exists */}
                                 {latestPendingOffer && (
                                     <button
                                         onClick={handlePersistentApprovePay}
                                         disabled={!!processingId}
-                                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap shadow-md flex items-center gap-1.5"
+                                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap shadow-md flex items-center justify-center gap-1.5"
                                         title={`Approve the latest offer of ₹${latestPendingOffer.offerAmount}`}
                                     >
                                         {processingId ? <Loader2 className="animate-spin h-4 w-4" /> : <CheckCircle size={16} />}

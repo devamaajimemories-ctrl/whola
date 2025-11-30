@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Chat from "@/lib/models/Chat";
 import Order from "@/lib/models/Order";
-import Seller from "@/lib/models/Seller"; // Import Seller model
+import Seller from "@/lib/models/Seller";
+import User from "@/lib/models/User"; // Added for buyer details
 import Razorpay from "razorpay";
 
 // ADDED: External bot integration
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
+const ADMIN_PHONE = '8448695809'; // Admin monitoring number
 
 // ADDED: Function to send notification
 async function sendEscrowNotification(sellerPhone: string, orderId: string, amount: number, payout: number) {
@@ -22,6 +24,26 @@ The buyer has paid, and the fund is now secured in escrow.
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: sellerPhone, message: message })
     }).catch(err => console.error("Escrow Notification Failed:", err));
+}
+
+// ADDED: Function to notify admin about deal approval
+async function sendAdminDealNotification(buyerName: string, sellerName: string, amount: number, orderId: string) {
+    const message = `💰 *DEAL APPROVED & PAYMENT INITIATED*
+
+📊 *Deal Details:*
+• Buyer: ${buyerName}
+• Seller: ${sellerName}
+• Deal Amount: ₹${amount}
+• Order ID: ${orderId}
+
+✅ Buyer has approved and initiated payment.
+💼 Monitor this deal in the admin dashboard.`;
+
+    await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: ADMIN_PHONE, message: message })
+    }).catch(err => console.error("Admin Deal Notification Failed:", err));
 }
 // END ADDED
 
@@ -41,10 +63,14 @@ export async function POST(req: Request) {
         if (!offerMsg || offerMsg.type !== 'OFFER' || offerMsg.offerStatus !== 'PENDING') {
             return NextResponse.json({ success: false, error: "Invalid or expired offer" });
         }
-        
+
         // ADDED: Fetch Seller Details
         const seller = await Seller.findById(sellerId);
         if (!seller) return NextResponse.json({ success: false, error: "Seller not found" });
+
+        // ADDED: Fetch Buyer Details
+        const buyer = await User.findById(offerMsg.userId);
+        const buyerName = buyer?.name || "Unknown Buyer";
 
         // 2. Financial Calculations
         const amount = offerMsg.offerAmount!; // Total Deal Amount (e.g., 1000)
@@ -92,9 +118,13 @@ export async function POST(req: Request) {
         offerMsg.type = 'PAYMENT_LINK';
         offerMsg.paymentLink = response.short_url;
         await offerMsg.save();
-        
+
         // ADDED: Send WhatsApp Notification to Seller
         sendEscrowNotification(seller.phone, internalOrderId, amount, sellerShare);
+
+        // ADDED: Send WhatsApp Notification to Admin
+        sendAdminDealNotification(buyerName, seller.name, amount, internalOrderId);
+        console.log(`📨 Admin notified about deal approval: ${internalOrderId}`);
 
         return NextResponse.json({ success: true, link: response.short_url });
 

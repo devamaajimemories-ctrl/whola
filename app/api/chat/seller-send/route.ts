@@ -3,6 +3,8 @@ import { headers } from 'next/headers';
 import { checkPII } from '@/lib/utils/pii-filter';
 import dbConnect from '@/lib/db';
 import Chat from '@/lib/models/Chat';
+import User from '@/lib/models/User';
+import Seller from '@/lib/models/Seller'; // Added for admin monitoring
 
 // Direct external bot integration
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
@@ -56,20 +58,62 @@ export async function POST(request: NextRequest) {
             createdAt: new Date()
         });
 
-        // ADMIN MONITORING
-        // Send copy to Admin
-        const adminMessage = `👮 *Deal Monitor: Seller -> Buyer*
+        // 1. NOTIFICATION TO BUYER
+        const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL;
+        const chatLink = `${websiteUrl}/buyer/messages?sellerId=${sellerId}`;
 
-FROM: Seller (${sellerId})
-TO: Buyer (${buyerId})
-MESSAGE: "${message}"`;
+        try {
+            const buyer = await User.findById(buyerId);
+            if (buyer && buyer.phone) {
+                const buyerMessage = `📢 *New Reply from Seller!*
+
+A seller has replied to your inquiry.
+
+👤 *Seller Message:* "${message}"
+
+👇 *Click below to Reply:*
+${chatLink}
+
+_Note: Please continue on the website to have the deal._
+_Tip: If the link is not clickable, please reply "Hi" to this message._`;
+
+                sendChatNotification(buyer.phone, buyerMessage);
+                console.log(`📨 Notification sent to Buyer ${buyer.phone}`);
+            }
+        } catch (err) {
+            console.error('Error sending buyer notification:', err);
+        }
+
+        // 3. Admin Monitoring (ENHANCED - Send seller reply to admin with full details)
+        const seller = await Seller.findById(sellerId);
+        const sellerName = seller?.name || "Unknown Seller";
+        const sellerPhone = seller?.phone || "N/A";
+
+        const buyerInfo = await User.findById(buyerId);
+        const buyerName = buyerInfo?.name || "Unknown Buyer";
+        const buyerPhone = buyerInfo?.phone || "N/A";
+
+        const adminMessage = `👮 *CHAT MONITOR: Seller → Buyer*
+
+🏪 *SELLER INFO:*
+• Name: ${sellerName}
+• WhatsApp: ${sellerPhone}
+
+📱 *BUYER INFO:*
+• Name: ${buyerName}
+• WhatsApp: ${buyerPhone}
+
+💬 *MESSAGE:* "${message}"
+
+🔗 *View Chat:* ${chatLink}`;
 
         sendChatNotification(ADMIN_PHONE, adminMessage);
+        console.log(`📨 Admin notification sent to ${ADMIN_PHONE}`);
 
-        return NextResponse.json({ success: true, data: newChat });
+        return NextResponse.json({ success: true });
 
     } catch (error) {
-        console.error('Error in seller send route:', error);
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+        console.error("Seller Send Error:", error);
+        return NextResponse.json({ success: false, error: "Server Error" }, { status: 500 });
     }
 }

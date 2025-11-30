@@ -4,6 +4,7 @@ import { checkPII } from '@/lib/utils/pii-filter';
 import dbConnect from '@/lib/db';
 import Seller from '@/lib/models/Seller';
 import Chat from '@/lib/models/Chat';
+import User from '@/lib/models/User'; // Added for admin monitoring
 
 // Direct external bot integration
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
@@ -77,8 +78,8 @@ A buyer has sent you a message.
 👇 *Click below to Reply & Fix Price:*
 ${chatLink}
 
-_Note: Please continue the conversation on the website to secure the deal._
-_Tip: If the link is not clickable, please reply "Hi" to this message or save this number._`;
+_Note: Please continue on the website to have the deal._
+_Tip: If the link is not clickable, please reply "Hi" to this message._`;
 
         // Fire and forget (don't await) to Seller
         sendChatNotification(seller.phone, whatsappMessage);
@@ -86,22 +87,32 @@ _Tip: If the link is not clickable, please reply "Hi" to this message or save th
         console.log(`📨 Message notification sent to Seller ${seller.phone}`);
 
         // 3. ADMIN MONITORING
-        // Send copy to Admin
-        const adminMessage = `👮 *Deal Monitor: Buyer -> Seller*
+        const buyer = await User.findById(userId);
+        const buyerName = buyer?.name || "Unknown Buyer";
+        const buyerPhone = buyer?.phone || "N/A";
 
-FROM: Buyer (${userId})
-TO: Seller (${seller.name} - ${seller.phone})
-MESSAGE: "${message}"
+        const adminMessage = `👮 *CHAT MONITOR: Buyer → Seller*
 
-LINK: ${chatLink}`;
+📱 *BUYER INFO:*
+• Name: ${buyerName}
+• WhatsApp: ${buyerPhone}
+
+🏪 *SELLER INFO:*
+• Name: ${seller.name}
+• WhatsApp: ${seller.phone}
+
+💬 *MESSAGE:* "${message}"
+
+🔗 *View Chat:* ${chatLink}`;
 
         sendChatNotification(ADMIN_PHONE, adminMessage);
         console.log(`📨 Admin monitoring notification sent to ${ADMIN_PHONE}`);
+        // END admin monitoring
 
-        return NextResponse.json({ success: true, data: newChat });
+        return NextResponse.json({ success: true });
 
     } catch (error) {
-        console.error('Error in chat send route:', error);
-        return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+        console.error("Chat Error:", error);
+        return NextResponse.json({ success: false, error: "Server Error" }, { status: 500 });
     }
 }

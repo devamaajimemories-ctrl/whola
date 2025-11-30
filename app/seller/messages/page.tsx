@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, MessageCircle, CheckCircle, Clock, DollarSign, Loader2, Users, ShieldCheck } from 'lucide-react';
+import { Send, MessageCircle, CheckCircle, Clock, DollarSign, Loader2, Users, ShieldCheck, X } from 'lucide-react';
 
 interface Conversation {
     _id: string; // buyerId
@@ -29,6 +29,10 @@ export default function SellerMessagesPage() {
     const [newMessage, setNewMessage] = useState("");
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [showOfferModal, setShowOfferModal] = useState(false);
+    const [offerAmount, setOfferAmount] = useState("");
+    const [offerDescription, setOfferDescription] = useState("");
+    const [sendingOffer, setSendingOffer] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // 1. Fetch Conversation List (Seller's Inbox)
@@ -96,6 +100,42 @@ export default function SellerMessagesPage() {
         setProcessingId(null);
     };
 
+    // 6. SEND SELLER OFFER (New Function)
+    const handleSendOffer = async () => {
+        if (!offerAmount || !offerDescription.trim() || !selectedBuyerId) {
+            alert("Please enter both amount and description");
+            return;
+        }
+
+        setSendingOffer(true);
+        try {
+            const res = await fetch('/api/chat/offer/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sellerId: selectedBuyerId, // This is actually buyerId for seller's context
+                    amount: parseFloat(offerAmount),
+                    description: offerDescription,
+                    sender: 'seller'
+                })
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                setShowOfferModal(false);
+                setOfferAmount("");
+                setOfferDescription("");
+                fetchMessages(selectedBuyerId);
+            } else {
+                alert(data.error || "Failed to send offer");
+            }
+        } catch (error) {
+            alert("An error occurred");
+        } finally {
+            setSendingOffer(false);
+        }
+    };
+
     const selectedConversation = conversations.find(c => c._id === selectedBuyerId);
 
     return (
@@ -112,10 +152,10 @@ export default function SellerMessagesPage() {
             </div>
 
             <div className="max-w-6xl mx-auto p-4">
-                <div className="grid lg:grid-cols-3 gap-4 h-[calc(100vh-200px)]">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-auto lg:h-[calc(100vh-200px)]">
 
                     {/* LEFT: Conversation List */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col max-h-[400px] lg:max-h-none">
                         <div className="p-4 border-b bg-gray-50">
                             <h3 className="font-bold text-gray-700 flex items-center gap-2">
                                 <Users size={18} />
@@ -157,7 +197,7 @@ export default function SellerMessagesPage() {
                     </div>
 
                     {/* RIGHT: Chat Window */}
-                    <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                    <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px] lg:min-h-0">
                         {selectedBuyerId ? (
                             <>
                                 {/* Chat Header */}
@@ -194,7 +234,7 @@ export default function SellerMessagesPage() {
                                                             className="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 rounded-lg flex items-center justify-center shadow-md disabled:opacity-50 mt-2 transition-colors"
                                                         >
                                                             {processingId === msg._id ? (
-                                                                <Loader2 className="animate-spin" size={16} /> 
+                                                                <Loader2 className="animate-spin" size={16} />
                                                             ) : (
                                                                 `✅ Accept & Finalize Offer ₹${msg.offerAmount}`
                                                             )}
@@ -218,7 +258,16 @@ export default function SellerMessagesPage() {
                                 </div>
 
                                 {/* Input Bar */}
-                                <div className="p-3 bg-gray-50 border-t border-gray-200 flex gap-2 items-center">
+                                <div className="p-3 bg-gray-50 border-t border-gray-200 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center flex-shrink-0">
+                                    {/* Send Offer Button */}
+                                    <button
+                                        onClick={() => setShowOfferModal(true)}
+                                        className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap shadow-md flex items-center justify-center gap-1.5"
+                                    >
+                                        <DollarSign size={16} />
+                                        Send Offer
+                                    </button>
+
                                     <input
                                         type="text"
                                         placeholder="Type message..."
@@ -246,6 +295,59 @@ export default function SellerMessagesPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Send Offer Modal */}
+            {showOfferModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-gray-800">Send Price Offer</h3>
+                            <button
+                                onClick={() => setShowOfferModal(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Offer Amount (₹) <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    value={offerAmount}
+                                    onChange={(e) => setOfferAmount(e.target.value)}
+                                    placeholder="e.g., 5000"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Description <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={offerDescription}
+                                    onChange={(e) => setOfferDescription(e.target.value)}
+                                    placeholder="e.g., Industrial Pump - Model XYZ"
+                                    rows={3}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleSendOffer}
+                                disabled={sendingOffer}
+                                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {sendingOffer ? <Loader2 className="animate-spin" size={20} /> : "Send Offer to Buyer"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

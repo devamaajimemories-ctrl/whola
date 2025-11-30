@@ -55,7 +55,7 @@ export default function RegisterModal({ isOpen, onClose }: RegisterModalProps) {
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={onClose}>
-            <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full overflow-hidden flex" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full overflow-hidden flex flex-col lg:flex-row" onClick={(e) => e.stopPropagation()}>
                 {/* Left Side - Image & Info */}
                 <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-gray-800 to-gray-900 p-12 flex-col justify-between text-white relative overflow-hidden">
                     {/* Background Image */}
