@@ -99,7 +99,7 @@ app.post('/send-message', async (req, res) => {
         console.log(`📤 Sending message to ${whatsappNumber}`);
 
         // Send message
-        const result = await client.sendMessage(whatsappNumber, message);
+        const result = await client.sendMessage(whatsappNumber, message, { linkPreview: true });
 
         console.log('✅ Message sent successfully:', result.id._serialized);
 

@@ -77,7 +77,8 @@ A buyer has sent you a message.
 👇 *Click below to Reply & Fix Price:*
 ${chatLink}
 
-_Note: Please continue the conversation on the website to secure the deal._`;
+_Note: Please continue the conversation on the website to secure the deal._
+_Tip: If the link is not clickable, please reply "Hi" to this message or save this number._`;
 
         // Fire and forget (don't await) to Seller
         sendChatNotification(seller.phone, whatsappMessage);
