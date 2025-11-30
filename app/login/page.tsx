@@ -97,7 +97,8 @@ function LoginContent() {
 
             // Check the correct key used in the API response (redirectUrl)
             if (data.success && data.redirectUrl) {
-                router.push(data.redirectUrl);
+                // Force a hard reload to ensure cookies are sent correctly
+                window.location.href = data.redirectUrl;
             } else {
                 setError(data.error || "Invalid OTP");
             }
