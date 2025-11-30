@@ -160,7 +160,7 @@ function LoginContent() {
                                         type="tel"
                                         value={phone}
                                         onChange={e => setPhone(e.target.value)}
-                                        className="block w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 text-lg font-medium"
+                                        className="block w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 text-lg font-medium text-black"
                                         placeholder="Enter your number"
                                     />
                                 </div>
@@ -198,7 +198,7 @@ function LoginContent() {
                                         type="text"
                                         value={otp}
                                         onChange={e => setOtp(e.target.value)}
-                                        className="block w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 text-lg font-medium tracking-widest"
+                                        className="block w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 text-lg font-medium tracking-widest text-black"
                                         placeholder="000000"
                                         maxLength={6}
                                     />

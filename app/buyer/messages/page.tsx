@@ -178,8 +178,8 @@ export default function MessagesPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col">
-            <header className="bg-white shadow-md p-4 sticky top-0 z-10">
+        <div className="h-[100dvh] bg-gray-50 flex flex-col overflow-hidden">
+            <header className="bg-white shadow-md p-4 flex-shrink-0 z-10">
                 <div className="container mx-auto flex justify-between items-center">
                     <h1 className="text-xl font-bold text-gray-800 flex items-center">
                         <MessageSquare className="w-6 h-6 mr-2 text-indigo-600" />
@@ -194,7 +194,7 @@ export default function MessagesPage() {
                 </div>
             </header>
 
-            <div className="container mx-auto p-4 flex gap-4 flex-1 overflow-hidden">
+            <div className="container mx-auto p-0 sm:p-4 flex gap-4 flex-1 overflow-hidden h-full">
                 {/* LEFT COLUMN: Conversations List */}
                 <div className={`${showMobileConversations ? 'fixed inset-0 z-50 bg-white' : 'hidden'
                     } lg:block lg:relative lg:w-80 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-y-auto flex-shrink-0`}>
@@ -239,11 +239,11 @@ export default function MessagesPage() {
                 </div>
 
                 {/* RIGHT COLUMN: Chat Window */}
-                <div className="flex-1 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col">
+                <div className="flex-1 bg-white sm:rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col h-full">
                     {selectedSellerId && selectedConversation ? (
                         <>
                             {/* Chat Header */}
-                            <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center">
+                            <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center flex-shrink-0">
                                 <h3 className="text-lg font-bold text-gray-900">{selectedConversation.partnerName}</h3>
                             </div>
 
@@ -319,7 +319,7 @@ export default function MessagesPage() {
                             </div>
 
                             {/* Input Area (MODIFIED: Removed old Propose button, added dynamic Approve & Pay button) */}
-                            <div className="p-4 bg-white border-t border-gray-100 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                            <div className="p-4 bg-white border-t border-gray-100 flex flex-col sm:flex-row gap-2 items-stretch sm:items-center flex-shrink-0">
                                 {/* NEW PERSISTENT BUTTON - Only shows if a PENDING seller offer exists */}
                                 {latestPendingOffer && (
                                     <button
@@ -339,7 +339,7 @@ export default function MessagesPage() {
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                                     placeholder="Type a message... (Negotiate here)"
-                                    className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-black"
                                 />
                                 <button
                                     onClick={handleSend}

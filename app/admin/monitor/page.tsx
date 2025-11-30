@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MessageSquare, Users, ShieldCheck, Loader2 } from 'lucide-react';
 
@@ -13,7 +13,8 @@ interface Message {
     offerAmount?: number;
 }
 
-export default function AdminMonitorPage() {
+// 1. Move your original logic into this sub-component
+function MonitorContent() {
     const searchParams = useSearchParams();
     const token = searchParams.get('token');
     const buyerId = searchParams.get('buyerId');
@@ -145,5 +146,14 @@ export default function AdminMonitorPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+// 2. Export the page component wrapped in Suspense
+export default function AdminMonitorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading Monitor...</div>}>
+            <MonitorContent />
+        </Suspense>
     );
 }

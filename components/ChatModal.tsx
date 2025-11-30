@@ -142,10 +142,10 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sell
 
     return (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-50 sm:p-4 backdrop-blur-sm">
-            <div className="bg-white w-full sm:max-w-md sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col h-full sm:h-[650px] max-h-screen">
+            <div className="bg-white w-full sm:max-w-md sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[650px] max-h-screen">
 
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-800 to-blue-900 p-4 flex justify-between items-center text-white shadow-md">
+                <div className="bg-gradient-to-r from-blue-800 to-blue-900 p-4 flex justify-between items-center text-white shadow-md flex-shrink-0">
                     <div>
                         <h3 className="font-bold text-lg">{sellerName}</h3>
                         <p className="text-xs text-blue-200 flex items-center opacity-80">
@@ -241,7 +241,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sell
                                 placeholder="Description (e.g. 500kg Rice Grade A)"
                                 value={dealDesc}
                                 onChange={(e) => setDealDesc(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500"
+                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 text-black"
                             />
                             <div className="flex gap-3">
                                 <div className="relative w-1/2">
@@ -251,7 +251,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sell
                                         placeholder="Amount"
                                         value={dealAmount}
                                         onChange={(e) => setDealAmount(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg pl-6 pr-3 py-2 text-sm outline-none focus:border-blue-500"
+                                        className="w-full border border-gray-300 rounded-lg pl-6 pr-3 py-2 text-sm outline-none focus:border-blue-500 text-black"
                                     />
                                 </div>
                                 <button
@@ -280,7 +280,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sell
                                     placeholder="Enter amount"
                                     value={quickOfferAmount}
                                     onChange={(e) => setQuickOfferAmount(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                                    className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none text-black"
                                     autoFocus
                                 />
                             </div>
@@ -341,7 +341,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sell
                 )}
 
                 {/* Chat Input Bar */}
-                <div className="p-3 bg-gray-50 border-t border-gray-200 flex gap-2 items-center">
+                <div className="p-3 bg-gray-50 border-t border-gray-200 flex gap-2 items-center flex-shrink-0">
                     {!isSellerView && (
                         <button
                             onClick={() => setShowQuickOffer(!showQuickOffer)}
@@ -357,7 +357,7 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sell
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                        className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                        className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black"
                     />
                     <button
                         onClick={handleSend}

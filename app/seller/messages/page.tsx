@@ -274,7 +274,7 @@ export default function SellerMessagesPage() {
                                         value={newMessage}
                                         onChange={(e) => setNewMessage(e.target.value)}
                                         onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                                        className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white"
+                                        className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none bg-white text-black"
                                     />
                                     <button
                                         onClick={handleSend}
@@ -320,7 +320,7 @@ export default function SellerMessagesPage() {
                                     value={offerAmount}
                                     onChange={(e) => setOfferAmount(e.target.value)}
                                     placeholder="e.g., 5000"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none text-black"
                                 />
                             </div>
 
@@ -333,7 +333,7 @@ export default function SellerMessagesPage() {
                                     onChange={(e) => setOfferDescription(e.target.value)}
                                     placeholder="e.g., Industrial Pump - Model XYZ"
                                     rows={3}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none resize-none"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 outline-none resize-none text-black"
                                 />
                             </div>
 
