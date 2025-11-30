@@ -33,6 +33,7 @@ export default function SellerMessagesPage() {
     const [offerAmount, setOfferAmount] = useState("");
     const [offerDescription, setOfferDescription] = useState("");
     const [sendingOffer, setSendingOffer] = useState(false);
+    const [shouldScroll, setShouldScroll] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // 1. Fetch Conversation List (Seller's Inbox)
@@ -56,10 +57,13 @@ export default function SellerMessagesPage() {
         }
     }, [selectedBuyerId]);
 
-    // 3. Auto-scroll
+    // 3. Auto-scroll (Conditional)
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        if (shouldScroll) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            setShouldScroll(false);
+        }
+    }, [messages, shouldScroll]);
 
     const fetchMessages = async (buyerId: string) => {
         const res = await fetch(`/api/chat/seller-history?buyerId=${buyerId}`);
@@ -73,6 +77,7 @@ export default function SellerMessagesPage() {
     const handleSend = async () => {
         if (!newMessage.trim() || !selectedBuyerId) return;
 
+        setShouldScroll(true); // Scroll on send
         await fetch('/api/chat/seller-send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -87,6 +92,7 @@ export default function SellerMessagesPage() {
     const handleAcceptProposal = async (messageId: string) => {
         if (!confirm("Accept this buyer's proposal?")) return;
         setProcessingId(messageId);
+        setShouldScroll(true); // Scroll on action
 
         const res = await fetch('/api/chat/offer/accept-proposal', {
             method: 'POST',
@@ -108,6 +114,7 @@ export default function SellerMessagesPage() {
         }
 
         setSendingOffer(true);
+        setShouldScroll(true); // Scroll on send offer
         try {
             const res = await fetch('/api/chat/offer/create', {
                 method: 'POST',
@@ -176,7 +183,10 @@ export default function SellerMessagesPage() {
                                 conversations.map((conv) => (
                                     <div
                                         key={conv._id}
-                                        onClick={() => setSelectedBuyerId(conv._id)}
+                                        onClick={() => {
+                                            setSelectedBuyerId(conv._id);
+                                            setShouldScroll(true); // Scroll on select
+                                        }}
                                         className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition ${selectedBuyerId === conv._id ? 'bg-green-50 border-l-4 border-l-green-600' : ''
                                             }`}
                                     >

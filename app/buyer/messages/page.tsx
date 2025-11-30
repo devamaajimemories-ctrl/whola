@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, Menu, MessageSquare, DollarSign, CheckCircle, Loader2, X, AlertTriangle } from 'lucide-react';
+import { Send, MessageSquare, DollarSign, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 
 // Interfaces (Assuming they exist or are imported correctly, defined here for context)
 interface Message {
@@ -34,7 +34,7 @@ export default function MessagesPage() {
     const [loadingConversations, setLoadingConversations] = useState(true);
     const [loadingMessages, setLoadingMessages] = useState(false);
     const [processingId, setProcessingId] = useState<string | null>(null);
-    const [showMobileConversations, setShowMobileConversations] = useState(false);
+    const [shouldScroll, setShouldScroll] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Logic to find the latest pending seller offer (for the persistent button)
@@ -61,6 +61,7 @@ export default function MessagesPage() {
                 setConversations(data.data);
                 if (data.data.length > 0 && !selectedSellerId) {
                     setSelectedSellerId(data.data[0].partnerId);
+                    setShouldScroll(true); // Scroll on initial auto-select
                 }
             }
         } catch (error) {
@@ -101,13 +102,17 @@ export default function MessagesPage() {
     }, [selectedSellerId]);
 
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+        if (shouldScroll) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            setShouldScroll(false);
+        }
+    }, [messages, shouldScroll]);
 
     const handleSelectConversation = (sellerId: string) => {
         setSelectedSellerId(sellerId);
         setMessages([]);
         setNewMessage("");
+        setShouldScroll(true); // Scroll when user selects a chat
         fetchMessages(sellerId);
     };
 
@@ -116,6 +121,7 @@ export default function MessagesPage() {
 
         const messageToSend = newMessage;
         setNewMessage("");
+        setShouldScroll(true); // Scroll when sending
 
         // Optimistic update
         setMessages(prev => [...prev, {
@@ -185,33 +191,20 @@ export default function MessagesPage() {
                         <MessageSquare className="w-6 h-6 mr-2 text-indigo-600" />
                         My Messages (Buyer)
                     </h1>
-                    <button
-                        onClick={() => setShowMobileConversations(!showMobileConversations)}
-                        className="text-gray-600 hover:text-indigo-600 lg:hidden"
-                    >
-                        <Menu className="w-6 h-6" />
-                    </button>
                 </div>
             </header>
 
-            <div className="container mx-auto p-0 sm:p-4 flex gap-4 flex-1 overflow-hidden h-full">
-                {/* LEFT COLUMN: Conversations List */}
-                <div className={`${showMobileConversations ? 'fixed inset-0 z-50 bg-white' : 'hidden'
-                    } lg:block lg:relative lg:w-80 bg-white rounded-2xl shadow-lg border border-gray-200 overflow-y-auto flex-shrink-0`}>
-                    <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                        <h2 className="text-lg font-semibold text-gray-800">
+            <div className="container mx-auto p-0 sm:p-4 flex gap-2 sm:gap-4 flex-1 overflow-hidden h-full">
+                {/* LEFT COLUMN: Conversations List - Always Visible */}
+                <div className="w-[35%] sm:w-80 bg-white sm:rounded-2xl shadow-lg border-r sm:border border-gray-200 overflow-y-auto flex-shrink-0 flex flex-col">
+                    <div className="p-3 sm:p-4 border-b border-gray-100">
+                        <h2 className="text-sm sm:text-lg font-semibold text-gray-800 truncate">
                             Active Chats
                         </h2>
-                        <button
-                            onClick={() => setShowMobileConversations(false)}
-                            className="lg:hidden text-gray-600 hover:text-gray-800"
-                        >
-                            <X size={20} />
-                        </button>
                     </div>
                     {loadingConversations ? (
                         <div className="p-4 text-center text-gray-500 flex items-center justify-center">
-                            <Loader2 className="animate-spin mr-2 w-4 h-4" /> Loading...
+                            <Loader2 className="animate-spin mr-2 w-4 h-4" /> <span className="hidden sm:inline">Loading...</span>
                         </div>
                     ) : (
                         conversations.map((conv) => (
@@ -219,17 +212,16 @@ export default function MessagesPage() {
                                 key={conv._id}
                                 onClick={() => {
                                     handleSelectConversation(conv.partnerId);
-                                    setShowMobileConversations(false);
                                 }}
-                                className={`flex items-center p-4 cursor-pointer border-b border-gray-100 transition-colors ${conv.partnerId === selectedSellerId ? 'bg-indigo-50 border-r-4 border-indigo-600' : 'hover:bg-gray-50'
+                                className={`flex flex-col sm:flex-row items-start sm:items-center p-3 sm:p-4 cursor-pointer border-b border-gray-100 transition-colors ${conv.partnerId === selectedSellerId ? 'bg-indigo-50 border-r-4 border-indigo-600' : 'hover:bg-gray-50'
                                     }`}
                             >
-                                <div className="flex-1 min-w-0">
-                                    <h3 className="font-semibold text-gray-900 truncate">{conv.partnerName}</h3>
-                                    <p className="text-sm text-gray-500 truncate">{conv.lastMessage}</p>
+                                <div className="flex-1 min-w-0 w-full">
+                                    <h3 className="font-semibold text-gray-900 truncate text-xs sm:text-base">{conv.partnerName}</h3>
+                                    <p className="text-xs sm:text-sm text-gray-500 truncate">{conv.lastMessage}</p>
                                 </div>
                                 {conv.unreadCount > 0 && (
-                                    <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <span className="mt-1 sm:mt-0 sm:ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-red-100 text-red-800">
                                         {conv.unreadCount}
                                     </span>
                                 )}
