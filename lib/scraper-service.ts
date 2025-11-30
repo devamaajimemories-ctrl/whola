@@ -3,14 +3,6 @@ import puppeteer from "puppeteer-core";
 import dbConnect from "@/lib/db";
 import Seller from "@/lib/models/Seller";
 
-// Types for our scraper
-interface ScrapeResult {
-    name: string;
-    phone: string;
-    city: string;
-    category: string;
-}
-
 export async function scrapeAndSaveSellers(query: string, categoryContext: string): Promise<any[]> {
     console.log(`⚡ [JIT-Scraper] Sourcing started for: "${query}"`);
     
@@ -19,84 +11,72 @@ export async function scrapeAndSaveSellers(query: string, categoryContext: strin
     try {
         await dbConnect();
 
-        // 1. Configure Browser (Optimized for Speed)
+        // 1. Configure Browser
         let executablePath = process.env.CHROME_EXECUTABLE_PATH;
-        
-        // Local fallback
         if (!executablePath) {
             if (process.platform === 'win32') executablePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
             else if (process.platform === 'darwin') executablePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
         }
-
-        // Cloud fallback
         if (process.env.NODE_ENV === 'production' || !executablePath) {
             executablePath = await chromium.executablePath('https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar');
         }
 
         browser = await puppeteer.launch({
             args: [...chromium.args, "--disable-gpu", "--disable-dev-shm-usage", "--no-sandbox"],
-            defaultViewport: null, // <--- FIXED: Changed from chromium.defaultViewport to null
+            defaultViewport: null,
             executablePath: executablePath,
-            headless: true, // Always headless for speed
+            headless: true,
             ignoreDefaultArgs: ['--enable-automation'],
         });
 
         const page = await browser.newPage();
 
-        // 2. PERFORMANCE HACK: Block Images, Fonts, and CSS
-        // This reduces data usage and speeds up loading by ~60%
+        // 2. Block Heavy Resources
         await page.setRequestInterception(true);
         page.on('request', (req) => {
             const type = req.resourceType();
-            if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
-                req.abort();
-            } else {
-                req.continue();
-            }
+            if (['image', 'stylesheet', 'font', 'media'].includes(type)) req.abort();
+            else req.continue();
         });
 
-        // 3. Navigate to Search
+        // 3. Navigate
         const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}/@?hl=en`;
-        await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
 
-        // 4. Fast Scroll Strategy
+        // 4. Scroll
         try {
-            await page.waitForSelector('div[role="feed"]', { timeout: 5000 });
+            await page.waitForSelector('div[role="feed"]', { timeout: 10000 });
             await page.evaluate(async () => {
                 const wrapper = document.querySelector('div[role="feed"]');
                 if (!wrapper) return;
-                
                 await new Promise((resolve) => {
                     let totalHeight = 0;
-                    const distance = 1000; // Big scroll jumps
+                    const distance = 1000;
                     let attempts = 0;
-                    
                     const timer = setInterval(() => {
                         const scrollHeight = wrapper.scrollHeight;
                         wrapper.scrollBy(0, distance);
                         totalHeight += distance;
                         attempts++;
-
-                        // Stop if we have 10+ results or scrolled enough
-                        const items = document.querySelectorAll('div[role="article"]').length;
-                        if (items >= 10 || attempts > 5) { 
+                        // Scroll more to get at least 15 results for better matching
+                        if (document.querySelectorAll('div[role="article"]').length >= 15 || attempts > 8) { 
                             clearInterval(timer);
                             resolve(true);
                         }
-                    }, 400); // Fast intervals
+                    }, 500);
                 });
             });
         } catch (e) {
-            console.log("⚠️ [JIT-Scraper] Feed load skipped (might be single result or fast load)");
+            console.log("⚠️ [JIT-Scraper] Fast load or no feed detected.");
         }
 
-        // 5. Extraction (Resilient Selectors)
+        // 5. Extract Data
         const rawSellers = await page.evaluate(() => {
             const items = Array.from(document.querySelectorAll('div[role="article"]'));
             return items.map(item => {
                 const text = (item as HTMLElement).innerText || "";
                 
-                // Robust Phone Regex for India (+91, 0, or plain 10 digit)
+                // Phone Regex
                 const phoneMatch = text.match(/((\+91|0)?\s?\d{5}\s?\d{5})|(\d{3,5}\s?\d{7})|(\+\d{1,3}\s?\d{3,5}\s?\d{5})/);
                 
                 let name = item.getAttribute("aria-label") || "";
@@ -105,29 +85,31 @@ export async function scrapeAndSaveSellers(query: string, categoryContext: strin
                     if (titleEl) name = (titleEl as HTMLElement).innerText;
                 }
 
+                // Infer City from text content if available
                 let city = "India";
-                if (text.includes("Mumbai")) city = "Mumbai";
-                else if (text.includes("Delhi")) city = "Delhi";
-                else if (text.includes("Bangalore")) city = "Bangalore";
-                else if (text.includes("Chennai")) city = "Chennai";
-                else if (text.includes("Kolkata")) city = "Kolkata";
-                else if (text.includes("Pune")) city = "Pune";
-                else if (text.includes("Hyderabad")) city = "Hyderabad";
+                // List of major Indian cities to check against
+                const majorCities = ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Ahmedabad", "Chennai", "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur", "Nagpur", "Indore", "Thane", "Bhopal", "Visakhapatnam", "Pimpri-Chinchwad", "Patna", "Vadodara", "Ghaziabad", "Ludhiana", "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot"];
+                
+                for (const c of majorCities) {
+                    if (text.includes(c)) {
+                        city = c;
+                        break;
+                    }
+                }
 
                 return {
                     name: name || "Unknown Seller",
                     phone: phoneMatch ? phoneMatch[0].trim() : "No Phone",
                     city,
-                    category: "Unknown" // Will be filled outside
                 };
             });
         });
 
-        // 6. Database Sync (Bulk Upsert)
+        // 6. Save to DB
         const validSellers = rawSellers.filter(s => s.phone !== "No Phone" && s.name !== "Unknown Seller");
         
         if (validSellers.length > 0) {
-            console.log(`💾 [JIT-Scraper] Saving ${validSellers.length} new sellers...`);
+            console.log(`💾 [JIT-Scraper] Found ${validSellers.length} items. Saving...`);
             
             const operations = validSellers.map(seller => ({
                 updateOne: {
@@ -136,12 +118,13 @@ export async function scrapeAndSaveSellers(query: string, categoryContext: strin
                         $set: {
                             name: seller.name,
                             city: seller.city,
-                            category: categoryContext, // The category user searched for
-                            tags: [query, "JIT Sourced", "Auto-Verified", categoryContext],
-                            isVerified: true // Auto-verify leads from Maps
+                            category: categoryContext, 
+                            // Add the SEARCH QUERY as a tag so regex search finds it immediately next time
+                            tags: [query, "JIT Sourced", "Auto-Verified", categoryContext, seller.city], 
+                            isVerified: true
                         },
                         $setOnInsert: {
-                            walletBalance: 500, // Free credits for new leads
+                            walletBalance: 500,
                             totalEarnings: 0
                         }
                     },
@@ -151,7 +134,7 @@ export async function scrapeAndSaveSellers(query: string, categoryContext: strin
 
             await Seller.bulkWrite(operations);
             
-            // Fetch the actual documents to return (needed for ID references)
+            // Return actual documents for the API to use
             const phones = validSellers.map(s => s.phone);
             return await Seller.find({ phone: { $in: phones } });
         }
@@ -159,7 +142,7 @@ export async function scrapeAndSaveSellers(query: string, categoryContext: strin
         return [];
 
     } catch (error) {
-        console.error("❌ [JIT-Scraper] Failed:", error);
+        console.error("❌ [JIT-Scraper] Critical Error:", error);
         return [];
     } finally {
         if (browser) await browser.close();

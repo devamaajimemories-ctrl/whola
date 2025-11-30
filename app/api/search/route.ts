@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Seller from '@/lib/models/Seller';
+import { scrapeAndSaveSellers } from '@/lib/scraper-service'; // Import the scraper service
 
-// Force dynamic to ensure fresh results every time
+// Allow up to 60 seconds for scraping operations
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
@@ -22,36 +24,56 @@ export async function GET(req: Request) {
 
         console.log(`🔍 [API] Searching for: "${query}"`);
 
-        // ---------------------------------------------------------
-        // ROBUST SEARCH STRATEGY (Standard Regex)
-        // ---------------------------------------------------------
-        // This works on Localhost AND Cloud without special indices.
-
-        // Escape special characters to prevent regex errors
+        // Escape special characters for Regex
         const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const regex = new RegExp(escapedQuery, 'i'); // 'i' = Case Insensitive
+        const regex = new RegExp(escapedQuery, 'i');
 
-        // Search across multiple fields
+        // Standard Filter
         const filter = {
             $or: [
                 { name: regex },
-                { category: regex }, // Matches if scraper saved Query as Category
-                { tags: { $in: [regex] } }, // Matches if scraper saved Query as a Tag
+                { category: regex },
+                { tags: { $in: [regex] } },
                 { city: regex }
             ]
         };
 
-        // 1. Get Data
-        const sellers = await Seller.find(filter)
-            .select('name phone category city tags isVerified') // Optimize: Only get needed fields
-            .sort({ isVerified: -1, _id: -1 }) // Priority: Verified first, then Newest
+        // 1. Initial Database Search
+        let sellers = await Seller.find(filter)
+            .select('name phone category city tags isVerified')
+            .sort({ isVerified: -1, _id: -1 })
             .skip(skip)
             .limit(limit);
 
-        // 2. Get Total Count (for Pagination)
-        const total = await Seller.countDocuments(filter);
+        let total = await Seller.countDocuments(filter);
 
-        console.log(`✅ [API] Found ${sellers.length} sellers matching "${query}"`);
+        // 2. 🚀 JIT SCRAPING LOGIC (If results are low)
+        if (total < 5) {
+            console.log(`📉 Low results (${total}) for "${query}". Triggering Auto-Scraper...`);
+            
+            // Construct a specific query for Google Maps
+            // If the user's query doesn't have a city, default to "India" or a specific hub
+            const locationContext = query.toLowerCase().includes("in ") ? "" : " in India";
+            const scrapeQuery = `Wholesale ${query}${locationContext}`;
+
+            // Run scraper (This will save new sellers to DB)
+            const newSellers = await scrapeAndSaveSellers(scrapeQuery, query);
+
+            if (newSellers.length > 0) {
+                console.log(`✅ Scraper found ${newSellers.length} new sellers. Refreshing list...`);
+                
+                // Re-run the search to include new data
+                sellers = await Seller.find(filter)
+                    .select('name phone category city tags isVerified')
+                    .sort({ createdAt: -1 }) // Show newest (scraped) first
+                    .skip(skip)
+                    .limit(limit);
+                
+                total = await Seller.countDocuments(filter);
+            }
+        }
+
+        console.log(`✅ [API] Returning ${sellers.length} sellers.`);
 
         return NextResponse.json({
             success: true,
@@ -61,7 +83,7 @@ export async function GET(req: Request) {
                 totalPages: Math.ceil(total / limit),
                 totalResults: total
             },
-            searchMethod: 'standard_regex'
+            source: total < 5 ? 'hybrid_scraped' : 'database'
         });
 
     } catch (error: any) {

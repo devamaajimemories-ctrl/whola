@@ -9,17 +9,32 @@ export const dynamic = 'force-dynamic';
 
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
 
-// Notification Helper
+// Helper to send WhatsApp notification
 async function notifySeller(seller: any, request: any) {
-    // ... (Keep notification logic same as before) ...
-    const leadLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/dashboard/leads/${request._id}`;
-    const message = `🚨 *New Business Opportunity!* ...`; // (Shortened for brevity)
+    if (!seller.phone || seller.phone === "No Phone") return;
 
-    fetch(`${WHATSAPP_BOT_URL}/send-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: seller.phone, message: message })
-    }).catch(err => console.error(`❌ Bot Notify Error:`, err));
+    const leadLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/dashboard/leads`;
+    const message = `🚨 *New Business Lead!*
+    
+📦 *Item:* ${request.product}
+📍 *Location:* ${request.city || 'India'}
+QTY: ${request.quantity}
+💰 *Budget:* ₹${request.estimatedPrice || 'Best Price'}
+
+Someone is looking for this product. Reply or click to unlock details:
+${leadLink}`;
+
+    console.log(`📤 Notifying ${seller.name} (${seller.phone})...`);
+
+    try {
+        await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: seller.phone, message: message })
+        });
+    } catch (err) {
+        console.error(`❌ Bot Notify Error for ${seller.phone}:`, err);
+    }
 }
 
 export async function POST(req: Request) {
@@ -27,64 +42,68 @@ export async function POST(req: Request) {
         await dbConnect();
         const body = await req.json();
 
-        // ... (Validation and Request Creation logic remains the same) ...
-        
         if (!body.product || !body.buyerPhone) {
              return NextResponse.json({ success: false, error: "Missing fields" }, { status: 400 });
         }
 
+        // 1. Save Buyer Requirement
         const newRequest = await Request.create({
              ...body,
              category: body.category || "General",
-             verificationStatus: 'VERIFIED',
              status: 'OPEN',
              createdAt: new Date()
         });
 
-        // 1. FETCH LOCAL SELLERS
+        console.log(`📝 Requirement created: ${body.product} in ${body.city || 'India'}`);
+
+        // 2. SEARCH: Find existing sellers in DB
+        // We use regex to match category OR product name tags
         let matchingSellers = await Seller.find({
             $or: [
                 { category: { $regex: body.category || body.product, $options: 'i' } },
-                { tags: { $in: [body.product, body.category] } }
+                { tags: { $in: [new RegExp(body.product, 'i')] } },
+                { name: { $regex: body.product, $options: 'i' } } // Also check seller names
             ]
-        }).sort({ walletBalance: -1 }).limit(10);
+        }).limit(15);
 
-        // 2. HYBRID LOGIC (Scraping)
-        if (matchingSellers.length < 5) {
-             const location = body.city || "India";
-             const query = `Wholesale ${body.product} in ${location}`;
+        // 3. 🚀 SCRAPE: If not enough local sellers, go to Google Maps
+        if (matchingSellers.length < 10) { // Increased threshold to ensure coverage
+             const location = body.city ? `${body.city}, India` : "India";
+             const query = `Wholesale ${body.product} dealers in ${location}`;
+             
+             console.log(`⚡ Shortage of sellers. Scraping Maps for: "${query}"`);
+             
              const scrapedSellers = await scrapeAndSaveSellers(query, body.category || body.product);
             
              if (scrapedSellers.length > 0) {
+                 // Merge new sellers into the notification list, avoiding ID duplicates
                  const existingIds = new Set(matchingSellers.map(s => s._id.toString()));
                  const newUniqueSellers = scrapedSellers.filter(s => !existingIds.has(s._id.toString()));
                  matchingSellers = [...matchingSellers, ...newUniqueSellers];
              }
         }
 
-        // 3. Broadcast Notifications
-        if (matchingSellers.length > 0) {
-            matchingSellers.forEach(seller => notifySeller(seller, newRequest));
-        }
+        // 4. BROADCAST: Send WhatsApp to ALL found sellers (DB + Scraped)
+        console.log(`📢 Broadcasting to ${matchingSellers.length} sellers...`);
+        
+        // Use Promise.all to send in parallel, but limit concurrency to avoid overwhelming the bot
+        const notificationPromises = matchingSellers.map(seller => notifySeller(seller, newRequest));
+        await Promise.allSettled(notificationPromises);
 
-        // 4. PRODUCTION RESPONSE (SECURE)
-        // We return ONLY the count and names, NOT the phone numbers.
         return NextResponse.json({
             success: true,
-            message: `Requirement live! Notified ${matchingSellers.length} suppliers.`,
+            message: `Requirement live! Notified ${matchingSellers.length} suppliers (including new finds).`,
             data: {
                 count: matchingSellers.length,
-                // Only show names, safer for display if needed
                 matchedSellers: matchingSellers.map(s => ({
                     name: s.name,
-                    city: s.city, 
-                    // phone: s.phone <--- REMOVED THIS LINE
+                    city: s.city
                 }))
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Req Error:", error);
-        return NextResponse.json({ success: false, error: "Server Error" }, { status: 500 });
+        return NextResponse.json({ success: false, error: error.message || "Server Error" }, { status: 500 });
     }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Send, Loader2, Search } from "lucide-react";
+import { X, Send, Loader2, Search, MapPin, Crosshair } from "lucide-react";
 import { industrialProducts } from "@/lib/industrialData";
 
 interface PostRequirementModalProps {
@@ -10,25 +10,24 @@ interface PostRequirementModalProps {
 }
 
 const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onClose }) => {
-    // 1. FIX: Renamed 'mobile' to 'buyerPhone' to match API expectations
     const [formData, setFormData] = useState({
         product: "",
         quantity: "",
         unit: "Pieces",
-        estimatedPrice: "",
+        estimatedPrice: "", // Target Price / Budget
         buyerName: "",
-        buyerPhone: "", // <--- Changed from 'mobile'
-        description: ""
+        buyerPhone: "",
+        description: "",    // Additional Details
+        city: ""
     });
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [isLocating, setIsLocating] = useState(false);
 
-    // Autocomplete State
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const suggestionsRef = useRef<HTMLDivElement>(null);
 
-    // Flatten products for easier searching
     const allProducts = React.useMemo(() => {
         return industrialProducts.flatMap(cat => cat.products);
     }, []);
@@ -43,13 +42,35 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    if (!isOpen) return null;
+    const handleDetectLocation = () => {
+        if (!navigator.geolocation) return alert("Geolocation not supported");
+        
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(async (pos) => {
+            try {
+                const { latitude, longitude } = pos.coords;
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
+                const data = await res.json();
+                
+                const detectedCity = data.address.city || data.address.town || data.address.state_district || data.address.state;
+                if (detectedCity) {
+                    setFormData(prev => ({ ...prev, city: detectedCity }));
+                }
+            } catch (e) {
+                alert("Could not fetch location.");
+            } finally {
+                setIsLocating(false);
+            }
+        }, () => {
+            setIsLocating(false);
+            alert("Permission denied for location.");
+        });
+    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData({ ...formData, [name]: value });
 
-        // Autocomplete Logic for Product Name
         if (name === "product") {
             if (value.trim().length > 1) {
                 const filtered = allProducts.filter(item =>
@@ -64,24 +85,15 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
         }
     };
 
-    const handleSuggestionClick = (productName: string) => {
-        setFormData({ ...formData, product: productName });
-        setShowSuggestions(false);
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
-            // 2. API Call: Now sends 'buyerPhone' correctly because we fixed the state key
             const response = await fetch("/api/requirements", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ...formData,
-                    category: "General" // You might want to make this dynamic later
-                }),
+                body: JSON.stringify(formData),
             });
 
             const result = await response.json();
@@ -90,34 +102,29 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                 setTimeout(() => {
                     setSuccess(false);
                     onClose();
-                    // 3. Reset Form with correct keys
                     setFormData({
-                        product: "",
-                        quantity: "",
-                        unit: "Pieces",
-                        estimatedPrice: "",
-                        buyerName: "",
-                        buyerPhone: "", // <--- Reset buyerPhone
-                        description: ""
+                        product: "", quantity: "", unit: "Pieces", estimatedPrice: "",
+                        buyerName: "", buyerPhone: "", description: "", city: ""
                     });
                 }, 3000);
             } else {
-                alert(result.error || "Failed to post requirement. Please try again.");
+                alert(result.error || "Failed to post requirement.");
             }
         } catch (error) {
-            console.error("Error posting requirement:", error);
             alert("An error occurred.");
         } finally {
             setLoading(false);
         }
     };
 
+    if (!isOpen) return null;
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200 max-h-[90vh] overflow-y-auto">
 
                 {/* Header */}
-                <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 flex justify-between items-center text-white">
+                <div className="bg-gradient-to-r from-red-600 to-red-700 p-6 flex justify-between items-center text-white sticky top-0 z-20">
                     <div>
                         <h2 className="text-xl font-bold">Post Your Requirement</h2>
                         <p className="text-red-100 text-sm mt-1">Get quotes from verified sellers instantly</p>
@@ -127,7 +134,6 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                     </button>
                 </div>
 
-                {/* Body */}
                 <div className="p-6">
                     {success ? (
                         <div className="text-center py-8">
@@ -135,31 +141,27 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                                 <Send size={32} />
                             </div>
                             <h3 className="text-xl font-bold text-gray-800 mb-2">Requirement Posted!</h3>
-                            <p className="text-gray-600">Your requirement has been broadcasted to top sellers. You will receive quotes shortly.</p>
+                            <p className="text-gray-600">We are contacting sellers in <b>{formData.city || 'your area'}</b> and will update you shortly.</p>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Product Input */}
                             <div className="relative" ref={suggestionsRef}>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Product / Service Name</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Product / Service Name <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     name="product"
                                     required
                                     value={formData.product}
                                     onChange={handleChange}
-                                    placeholder="E.g. TMT Steel Bars, Rice, CNC Machine"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                                    placeholder="E.g. TMT Steel Bars"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
                                     autoComplete="off"
                                 />
-                                {/* Autocomplete Dropdown */}
                                 {showSuggestions && suggestions.length > 0 && (
                                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-48 overflow-y-auto">
                                         {suggestions.map((item, index) => (
-                                            <div
-                                                key={index}
-                                                onClick={() => handleSuggestionClick(item)}
-                                                className="px-4 py-2 hover:bg-red-50 cursor-pointer text-sm text-gray-700 flex items-center"
-                                            >
+                                            <div key={index} onClick={() => { setFormData({ ...formData, product: item }); setShowSuggestions(false); }} className="px-4 py-2 hover:bg-red-50 cursor-pointer text-sm text-gray-700 flex items-center">
                                                 <Search size={14} className="mr-2 text-gray-400" />
                                                 {item}
                                             </div>
@@ -168,103 +170,99 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                                 )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                            {/* Location (City) Input */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">City / Location <span className="text-red-500">*</span></label>
+                                <div className="relative">
                                     <input
                                         type="text"
-                                        name="quantity"
-                                        required
-                                        value={formData.quantity}
+                                        name="city"
+                                        value={formData.city}
                                         onChange={handleChange}
-                                        placeholder="E.g. 500"
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                                        placeholder="Enter City or Detect"
+                                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none"
                                     />
+                                    <MapPin size={18} className="absolute left-3 top-2.5 text-gray-400" />
+                                    <button
+                                        type="button"
+                                        onClick={handleDetectLocation}
+                                        disabled={isLocating}
+                                        className="absolute right-2 top-1 text-xs bg-blue-50 text-blue-600 px-2 py-1.5 rounded hover:bg-blue-100 flex items-center gap-1 transition-colors"
+                                    >
+                                        {isLocating ? <Loader2 size={12} className="animate-spin" /> : <Crosshair size={12} />}
+                                        Detect
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Quantity & Price Row */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Quantity <span className="text-red-500">*</span></label>
+                                    <div className="flex">
+                                        <input 
+                                            type="text" 
+                                            name="quantity" 
+                                            required 
+                                            value={formData.quantity} 
+                                            onChange={handleChange} 
+                                            placeholder="500" 
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-red-500 outline-none border-r-0" 
+                                        />
+                                        <select 
+                                            name="unit" 
+                                            value={formData.unit} 
+                                            onChange={handleChange} 
+                                            className="bg-gray-50 border border-gray-300 text-gray-700 rounded-r-lg focus:ring-2 focus:ring-red-500 outline-none px-2 text-sm"
+                                        >
+                                            <option value="Pieces">Pcs</option>
+                                            <option value="Tons">Tons</option>
+                                            <option value="Kg">Kg</option>
+                                            <option value="Sets">Sets</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                                    <select
-                                        name="unit"
-                                        value={formData.unit}
-                                        onChange={handleChange}
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all bg-white"
-                                    >
-                                        <option value="Pieces">Pieces</option>
-                                        <option value="Tons">Tons</option>
-                                        <option value="Kg">Kg</option>
-                                        <option value="Sets">Sets</option>
-                                        <option value="Liters">Liters</option>
-                                        <option value="Meters">Meters</option>
-                                    </select>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Target Price <span className="text-red-500">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        name="estimatedPrice"
+                                        required 
+                                        value={formData.estimatedPrice} 
+                                        onChange={handleChange} 
+                                        placeholder="e.g. ₹50/pc" 
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" 
+                                    />
                                 </div>
                             </div>
 
+                            {/* Description - Optional */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Price / Budget</label>
-                                <input
-                                    type="text"
-                                    name="estimatedPrice"
-                                    required
-                                    value={formData.estimatedPrice}
-                                    onChange={handleChange}
-                                    placeholder="E.g. ₹50,000 or Best Market Price"
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Description / Specific Details</label>
                                 <textarea
                                     name="description"
-                                    required
                                     value={formData.description}
                                     onChange={handleChange}
-                                    placeholder="Add more details like grade, size, brand preference..."
-                                    rows={2}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all resize-none"
+                                    rows={3}
+                                    placeholder="Describe your requirement in detail (brand, size, grade, etc.)"
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none resize-none"
                                 />
                             </div>
 
+                            {/* Contact Details */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-                                    <input
-                                        type="text"
-                                        name="buyerName"
-                                        required
-                                        value={formData.buyerName}
-                                        onChange={handleChange}
-                                        placeholder="Enter your name"
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Your Name <span className="text-red-500">*</span></label>
+                                    <input type="text" name="buyerName" required value={formData.buyerName} onChange={handleChange} placeholder="John Doe" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
-                                    <input
-                                        type="tel"
-                                        name="buyerPhone" // <--- 4. Updated name attribute
-                                        required
-                                        value={formData.buyerPhone} // <--- Updated value binding
-                                        onChange={handleChange}
-                                        placeholder="+91 XXXXX XXXXX"
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
-                                    />
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number <span className="text-red-500">*</span></label>
+                                    <input type="tel" name="buyerPhone" required value={formData.buyerPhone} onChange={handleChange} placeholder="+91..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" />
                                 </div>
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-md hover:shadow-lg transition-all flex items-center justify-center mt-2 disabled:opacity-70 disabled:cursor-not-allowed"
-                            >
-                                {loading ? (
-                                    <>
-                                        <Loader2 size={20} className="animate-spin mr-2" />
-                                        Posting...
-                                    </>
-                                ) : (
-                                    "Post Requirement Now"
-                                )}
+                            <button type="submit" disabled={loading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-md flex items-center justify-center gap-2 disabled:opacity-70">
+                                {loading ? <Loader2 size={20} className="animate-spin" /> : "Post Requirement Now"}
                             </button>
                         </form>
                     )}
