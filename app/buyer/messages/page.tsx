@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
     Send, ArrowLeft, MoreVertical, Phone, Search,
-    CheckCircle, ShieldCheck, ShoppingBag, Loader2
+    ShieldCheck, Loader2, MessageSquare, User, Paperclip, Smile
 } from 'lucide-react';
 
 // --- Types ---
@@ -16,7 +16,6 @@ interface Conversation {
         city: string;
         category: string;
         isVerified: boolean;
-        avatarColor?: string;
     };
 }
 
@@ -29,7 +28,7 @@ interface Message {
     offerAmount?: number;
 }
 
-export default function BuyerMessagesPage() {
+export default function WhatsAppStylePage() {
     // --- State ---
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeSellerId, setActiveSellerId] = useState<string | null>(null);
@@ -40,16 +39,13 @@ export default function BuyerMessagesPage() {
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // --- Effects ---
-
-    // 1. Initial Load & Poll Inbox
+    // --- Load Data ---
     useEffect(() => {
         fetchConversations();
         const interval = setInterval(fetchConversations, 10000);
         return () => clearInterval(interval);
     }, []);
 
-    // 2. Poll Active Chat
     useEffect(() => {
         if (activeSellerId) {
             fetchMessages(activeSellerId);
@@ -58,14 +54,14 @@ export default function BuyerMessagesPage() {
         }
     }, [activeSellerId]);
 
-    // 3. Auto-scroll to bottom
+    // Auto-scroll
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages]);
+    }, [messages, activeSellerId]);
 
-    // --- API Calls ---
+    // --- API Functions ---
     const fetchConversations = async () => {
         try {
             const res = await fetch('/api/chat/conversations');
@@ -93,70 +89,73 @@ export default function BuyerMessagesPage() {
                 body: JSON.stringify({ sellerId: activeSellerId, message: input })
             });
             setInput("");
-            fetchMessages(activeSellerId); // Instant refresh
+            fetchMessages(activeSellerId);
         } catch (e) { alert("Failed to send"); }
         finally { setSending(false); }
     };
 
-    // --- Helpers ---
     const activeConv = conversations.find(c => c._id === activeSellerId);
 
-    // --- RENDER ---
     return (
-        // MAIN CONTAINER: Fixed height, no window scroll
-        <div className="flex h-[calc(100vh-64px)] bg-white overflow-hidden">
+        // MAIN WRAPPER: Fixed Viewport Height
+        <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-[#d1d7db] font-sans">
 
-            {/* SIDEBAR: List of Sellers */}
+            {/* ================= LEFT SIDEBAR ================= */}
             <aside className={`
-                w-full md:w-80 lg:w-96 border-r border-gray-200 flex flex-col bg-white z-10
-                ${activeSellerId ? 'hidden md:flex' : 'flex'} 
+                w-full md:w-[400px] bg-white border-r border-[#d1d7db] flex flex-col z-20
+                ${activeSellerId ? 'hidden md:flex' : 'flex'}
             `}>
-                {/* Sidebar Header */}
-                <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                    <h1 className="text-xl font-bold text-gray-800 mb-3">Messages</h1>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+                {/* 1. Sidebar Header (Gray Bar) */}
+                <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between shrink-0 border-b border-[#d1d7db]">
+                    <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center text-gray-500">
+                        <User size={20} />
+                    </div>
+                    <div className="flex gap-6 text-[#54656f]">
+                        <MessageSquare size={20} />
+                        <MoreVertical size={20} />
+                    </div>
+                </div>
+
+                {/* 2. Search Bar */}
+                <div className="p-2 bg-white border-b border-[#f0f2f5] shrink-0">
+                    <div className="bg-[#f0f2f5] rounded-lg flex items-center px-3 py-1.5 h-[35px]">
+                        <Search size={18} className="text-[#54656f] mr-4" />
                         <input
                             type="text"
-                            placeholder="Search chats..."
-                            className="w-full bg-white border border-gray-200 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="Search or start new chat"
+                            className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder-[#54656f] text-[#3b4a54]"
                         />
                     </div>
                 </div>
 
-                {/* Sidebar List (Scrollable) */}
-                <div className="flex-1 overflow-y-auto">
+                {/* 3. Conversation List */}
+                <div className="flex-1 overflow-y-auto bg-white">
                     {loading ? (
-                        <div className="p-4 text-center text-gray-400">Loading chats...</div>
-                    ) : conversations.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6 text-center">
-                            <ShoppingBag size={48} className="mb-2 opacity-20" />
-                            <p>No messages yet</p>
-                        </div>
+                        <div className="p-10 flex justify-center"><Loader2 className="animate-spin text-[#00a884]" /></div>
                     ) : (
                         conversations.map((conv) => (
                             <div
                                 key={conv._id}
                                 onClick={() => setActiveSellerId(conv._id)}
                                 className={`
-                                    flex items-center gap-3 p-4 cursor-pointer hover:bg-gray-50 border-b border-gray-50 transition-colors
-                                    ${activeSellerId === conv._id ? 'bg-blue-50 border-l-4 border-l-blue-600' : ''}
+                                    flex items-center gap-3 p-3 cursor-pointer border-b border-[#f0f2f5] hover:bg-[#f5f6f6]
+                                    ${activeSellerId === conv._id ? 'bg-[#f0f2f5]' : ''}
                                 `}
                             >
                                 {/* Avatar */}
-                                <div className="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-lg flex-shrink-0">
+                                <div className="w-12 h-12 rounded-full bg-[#dfe5e7] flex items-center justify-center text-gray-600 text-lg font-medium shrink-0">
                                     {conv.seller.name[0]}
                                 </div>
 
                                 {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-baseline">
-                                        <h3 className="font-semibold text-gray-900 truncate">{conv.seller.name}</h3>
-                                        <span className="text-xs text-gray-400 whitespace-nowrap ml-2">
+                                <div className="flex-1 min-w-0 flex flex-col justify-center">
+                                    <div className="flex justify-between items-baseline mb-0.5">
+                                        <h3 className="text-[#111b21] font-normal text-[17px] truncate">{conv.seller.name}</h3>
+                                        <span className="text-xs text-[#667781] whitespace-nowrap">
                                             {new Date(conv.lastDate).toLocaleDateString()}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-gray-500 truncate">{conv.lastMessage}</p>
+                                    <p className="text-sm text-[#667781] truncate">{conv.lastMessage}</p>
                                 </div>
                             </div>
                         ))
@@ -164,105 +163,121 @@ export default function BuyerMessagesPage() {
                 </div>
             </aside>
 
-            {/* CHAT AREA: The Conversation */}
+
+            {/* ================= RIGHT MAIN CHAT ================= */}
             <main className={`
-                flex-1 flex flex-col bg-[#efeae2] relative
+                flex-1 flex flex-col relative
                 ${!activeSellerId ? 'hidden md:flex' : 'flex'}
             `}>
                 {activeSellerId && activeConv ? (
                     <>
-                        {/* Chat Header */}
-                        <header className="bg-white p-3 border-b border-gray-200 flex items-center justify-between shadow-sm flex-shrink-0">
+                        {/* 1. Chat Header */}
+                        <header className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between shrink-0 border-b border-[#d1d7db] z-10">
                             <div className="flex items-center gap-3">
-                                {/* Mobile Back Button */}
+                                {/* Back Button (Mobile) */}
                                 <button
                                     onClick={() => setActiveSellerId(null)}
-                                    className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-full"
+                                    className="md:hidden text-[#54656f]"
                                 >
-                                    <ArrowLeft size={20} />
+                                    <ArrowLeft size={24} />
                                 </button>
 
-                                <div className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold">
+                                <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center text-gray-600 text-lg">
                                     {activeConv.seller.name[0]}
                                 </div>
                                 <div>
-                                    <h2 className="font-bold text-gray-800 flex items-center gap-1">
+                                    <h2 className="text-[#111b21] font-medium text-[16px] flex items-center gap-1">
                                         {activeConv.seller.name}
-                                        {activeConv.seller.isVerified && <ShieldCheck size={14} className="text-green-500" />}
+                                        {activeConv.seller.isVerified && <ShieldCheck size={14} className="text-[#00a884]" />}
                                     </h2>
-                                    <p className="text-xs text-gray-500">{activeConv.seller.category}</p>
+                                    <p className="text-xs text-[#667781]">Online</p>
                                 </div>
                             </div>
-
-                            <div className="flex gap-2">
-                                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
-                                    <Phone size={20} />
-                                </button>
-                                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
-                                    <MoreVertical size={20} />
-                                </button>
+                            <div className="flex gap-5 text-[#54656f]">
+                                <Phone size={20} />
+                                <Search size={20} />
+                                <MoreVertical size={20} />
                             </div>
                         </header>
 
-                        {/* Messages (Scrollable) */}
+                        {/* 2. Messages Area (Beige Background) */}
                         <div
-                            className="flex-1 overflow-y-auto p-4 space-y-3 bg-opacity-10 bg-[url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')]"
+                            className="flex-1 overflow-y-auto p-4 md:px-16 lg:px-24 bg-[#efeae2] relative"
                             ref={scrollRef}
+                            style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')", backgroundBlendMode: 'overlay' }}
                         >
-                            {messages.map((msg) => (
-                                <div
-                                    key={msg._id}
-                                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div className={`
-                                        max-w-[80%] rounded-lg px-4 py-2 shadow-sm text-sm relative
-                                        ${msg.sender === 'user'
-                                            ? 'bg-[#d9fdd3] text-gray-900 rounded-tr-none'
-                                            : 'bg-white text-gray-900 rounded-tl-none'}
-                                    `}>
-                                        {msg.type === 'OFFER' && (
-                                            <div className="text-xs font-bold text-orange-600 mb-1">OFFER RECEIVED</div>
-                                        )}
-                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.message}</p>
-                                        <span className={`text-[10px] block text-right mt-1 ${msg.sender === 'user' ? 'text-gray-500' : 'text-gray-400'}`}>
-                                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
+                            <div className="space-y-2 pb-2">
+                                {messages.map((msg) => (
+                                    <div
+                                        key={msg._id}
+                                        className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                    >
+                                        <div className={`
+                                            relative max-w-[85%] md:max-w-[65%] rounded-lg px-2 py-1.5 shadow-[0_1px_0.5px_rgba(0,0,0,0.13)] text-[14.2px] leading-[19px]
+                                            ${msg.sender === 'user'
+                                                ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-none'
+                                                : 'bg-white text-[#111b21] rounded-tl-none'}
+                                        `}>
+                                            {/* Offer/Deal Badge */}
+                                            {msg.type === 'OFFER' && (
+                                                <div className="mb-1 text-xs font-bold text-orange-600 uppercase tracking-wide">
+                                                    Special Offer
+                                                </div>
+                                            )}
+
+                                            {/* Message Text */}
+                                            <div className="pr-16 whitespace-pre-wrap">{msg.message}</div>
+
+                                            {/* Timestamp */}
+                                            <span className={`
+                                                absolute bottom-1 right-2 text-[11px] 
+                                                ${msg.sender === 'user' ? 'text-[#00a884]' : 'text-[#667781]'}
+                                            `}>
+                                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {msg.sender === 'user' && <span className="ml-1">✓✓</span>}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
 
-                        {/* Input Area */}
-                        <footer className="bg-[#f0f2f5] p-3 flex items-center gap-2 flex-shrink-0">
-                            <input
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                                placeholder="Type a message"
-                                className="flex-1 bg-white border-none rounded-lg px-4 py-3 focus:ring-0 text-sm shadow-sm"
-                            />
+                        {/* 3. Input Footer */}
+                        <footer className="bg-[#f0f2f5] min-h-[62px] px-4 py-2 flex items-center gap-3 shrink-0 z-10">
+                            <div className="flex gap-4 text-[#54656f]">
+                                <Smile size={24} />
+                                <Paperclip size={24} />
+                            </div>
+
+                            <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2">
+                                <input
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+                                    placeholder="Type a message"
+                                    className="w-full bg-transparent border-none focus:ring-0 text-[15px] text-[#3b4a54] placeholder-[#54656f] p-0"
+                                />
+                            </div>
+
                             <button
                                 onClick={handleSend}
                                 disabled={!input.trim() || sending}
-                                className="p-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 disabled:opacity-50 transition-all shadow-sm"
+                                className="text-[#54656f] hover:text-[#00a884] transition-colors"
                             >
-                                {sending ? <Loader2 className="animate-spin" size={20} /> : <Send size={20} />}
+                                {sending ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
                             </button>
                         </footer>
                     </>
                 ) : (
-                    // Desktop Placeholder (Empty State)
-                    <div className="hidden md:flex flex-col items-center justify-center h-full text-gray-400 border-l border-gray-300/50">
-                        <div className="w-32 h-32 bg-gray-200 rounded-full flex items-center justify-center mb-6">
-                            <div className="relative">
-                                <ShoppingBag size={50} className="text-gray-400" />
-                                <div className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full">
-                                    <CheckCircle className="text-green-500" size={20} />
-                                </div>
-                            </div>
+                    // Default Empty State (Like WhatsApp Web)
+                    <div className="hidden md:flex flex-col items-center justify-center h-full bg-[#f0f2f5] border-b-[6px] border-[#25d366]">
+                        <div className="text-center px-10">
+                            <h2 className="text-[#41525d] text-[32px] font-light mt-8 mb-4">WhatsApp Web for Business</h2>
+                            <p className="text-[#667781] text-sm leading-6">
+                                Send and receive messages without keeping your phone online.<br />
+                                Use WhatsApp on up to 4 linked devices and 1 phone.
+                            </p>
                         </div>
-                        <h2 className="text-2xl font-light text-gray-600 mb-2">Web Chat</h2>
-                        <p className="text-sm">Select a conversation to start messaging.</p>
                     </div>
                 )}
             </main>
