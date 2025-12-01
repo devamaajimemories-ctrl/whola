@@ -39,13 +39,13 @@ export default async function SellerDashboard() {
     }
 
     // 2. Fetch All Required Data in Parallel (Fast & Efficient)
-    const [seller, products, recentOrders, recentLeads, transactions] = await Promise.all([
+    const [seller, products, recentOrders] = await Promise.all([
         Seller.findById(userId),
         Product.find({ sellerId: userId }),
-        Order.find({ sellerId: userId }).sort({ createdAt: -1 }).limit(5),
-        Request.find({ category: { $exists: true } }).sort({ createdAt: -1 }).limit(5), // In real app, match seller category
-        Transaction.find({ sellerId: userId }).sort({ createdAt: -1 }).limit(5)
+        Order.find({ sellerId: userId }).sort({ createdAt: -1 }).limit(5)
     ]);
+
+    const recentLeads: any[] = [];
 
     if (!seller) return <div>Seller account not found.</div>;
 
@@ -77,7 +77,7 @@ export default async function SellerDashboard() {
                     <div className="flex items-center gap-4 text-sm font-medium">
                         <div className="hidden md:flex items-center gap-4">
                             <Link href="/seller/products" className="hover:text-yellow-300 transition">My Products</Link>
-                            <Link href="/seller/leads" className="hover:text-yellow-300 transition">Buy Leads</Link>
+
                             <Link href="/seller/orders" className="hover:text-yellow-300 transition">Orders</Link>
                         </div>
                         <div className="bg-white/10 px-3 py-1 rounded-full flex items-center gap-2 border border-white/20">
@@ -126,9 +126,7 @@ export default async function SellerDashboard() {
                             <Link href="/seller/products/add" className="flex items-center gap-3 p-3 hover:bg-blue-50 rounded-lg text-gray-700 transition">
                                 <Plus size={18} className="text-blue-600" /> Add Product
                             </Link>
-                            <Link href="/seller/leads" className="flex items-center gap-3 p-3 hover:bg-blue-50 rounded-lg text-gray-700 transition">
-                                <Bell size={18} className="text-orange-500" /> Browse Leads
-                            </Link>
+
                             <Link href="/seller/settings" className="flex items-center gap-3 p-3 hover:bg-blue-50 rounded-lg text-gray-700 transition">
                                 <Settings size={18} className="text-gray-500" /> Settings
                             </Link>
@@ -237,36 +235,7 @@ export default async function SellerDashboard() {
                             </div>
                         </div>
 
-                        {/* New Leads */}
-                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-gray-800 flex items-center gap-2">
-                                    <Bell size={20} className="text-orange-500" /> New Buy Leads
-                                </h3>
-                                <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">Live</span>
-                            </div>
-
-                            <div className="space-y-3">
-                                {recentLeads.length > 0 ? recentLeads.map((lead: any) => (
-                                    <div key={lead._id.toString()} className="flex items-start gap-3 pb-3 border-b border-gray-50 last:border-0 last:pb-0">
-                                        <div className="bg-gray-100 p-2 rounded-lg">
-                                            <User size={16} className="text-gray-500" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-gray-800 line-clamp-1">{lead.product}</p>
-                                            <p className="text-xs text-gray-500 flex items-center mt-1">
-                                                <MapPin size={10} className="mr-1" /> {lead.city || 'India'} • Qty: {lead.quantity}
-                                            </p>
-                                        </div>
-                                        <Link href={`/seller/dashboard/leads/${lead._id}`} className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition">
-                                            Unlock
-                                        </Link>
-                                    </div>
-                                )) : (
-                                    <p className="text-gray-500 text-sm text-center py-4">No new leads in your category.</p>
-                                )}
-                            </div>
-                        </div>
+                        {/* Leads Section Removed */}
 
                     </div>
                 </div>

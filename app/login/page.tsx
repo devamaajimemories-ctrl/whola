@@ -26,7 +26,24 @@ function LoginContent() {
         if (roleParam === 'seller' || roleParam === 'buyer') {
             setRole(roleParam);
         }
-    }, [searchParams]);
+
+        // CHECK IF ALREADY LOGGED IN
+        const checkSession = async () => {
+            try {
+                const res = await fetch('/api/auth/me');
+                const data = await res.json();
+                if (data.success && data.user) {
+                    // Redirect based on role
+                    if (data.user.role === 'seller') router.replace('/seller/dashboard');
+                    else if (data.user.role === 'buyer') router.replace('/buyer/dashboard');
+                }
+            } catch (err) {
+                console.error("Session check failed", err);
+            }
+        };
+        checkSession();
+
+    }, [searchParams, router]);
 
     // Countdown Timer Effect
     useEffect(() => {
