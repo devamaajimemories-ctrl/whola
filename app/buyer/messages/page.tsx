@@ -202,7 +202,7 @@ function MessagesContent() {
                 <div className="container mx-auto flex justify-between items-center">
                     <h1 className="text-xl font-bold text-gray-800 flex items-center">
                         <MessageSquare className="w-6 h-6 mr-2 text-indigo-600" />
-                        My Messages (Buyer)
+                        Chat with Supplier
                     </h1>
                 </div>
             </header>
