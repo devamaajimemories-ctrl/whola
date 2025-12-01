@@ -46,7 +46,7 @@ export async function POST(req: Request) {
         if (sender === 'seller') {
             // If Sender is Seller: AuthUser is Seller, Body's sellerId is actually the Buyer
             realSellerId = authUserId;
-            realBuyerId = sellerId; 
+            realBuyerId = sellerId;
         } else {
             // If Sender is User: AuthUser is Buyer, Body's sellerId is the Seller
             realSellerId = sellerId;
@@ -78,7 +78,12 @@ export async function POST(req: Request) {
         const buyerDoc = await User.findById(realBuyerId).select('name phone');
 
         const typeLabel = sender === 'seller' ? "🆕 SELLER OFFER" : "✋ BUYER PROPOSAL";
-        
+
+        // Admin monitoring link (no login required)
+        const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL;
+        const adminToken = process.env.ADMIN_MONITOR_TOKEN || 'admin123secure';
+        const adminMonitorLink = `${websiteUrl}/admin/monitor?token=${adminToken}&buyerId=${realBuyerId}&sellerId=${realSellerId}`;
+
         const adminMsg = `👮 *MONITOR: ${typeLabel}*
 
 💰 *Amount:* ₹${amount}
@@ -87,7 +92,9 @@ export async function POST(req: Request) {
 🏪 *Seller:* ${sellerDoc?.name || 'Unknown'} (${sellerDoc?.phone || 'N/A'})
 👤 *Buyer:* ${buyerDoc?.name || 'Unknown'} (${buyerDoc?.phone || 'N/A'})
 
-ℹ️ *Status:* Created (Pending Acceptance)`;
+ℹ️ *Status:* Created (Pending Acceptance)
+
+🔗 *Monitor Live:* ${adminMonitorLink}`;
 
         notifyAdmin(adminMsg);
 

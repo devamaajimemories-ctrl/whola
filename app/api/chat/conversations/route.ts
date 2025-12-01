@@ -15,6 +15,8 @@ export async function GET(req: Request) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
 
+        console.log(`Fetching conversations for Buyer: ${userId}`);
+
         // Aggregate chats to find unique sellers and the latest message
         // Also checks if ANY message in the conversation has offerStatus = 'ACCEPTED'
         const conversations = await Chat.aggregate([

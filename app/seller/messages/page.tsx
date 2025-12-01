@@ -108,6 +108,7 @@ export default function SellerMessagesPage() {
 
     // 6. SEND SELLER OFFER (New Function)
     const handleSendOffer = async () => {
+        console.log("Attempting to send offer:", { offerAmount, offerDescription, selectedBuyerId });
         if (!offerAmount || !offerDescription.trim() || !selectedBuyerId) {
             alert("Please enter both amount and description");
             return;
