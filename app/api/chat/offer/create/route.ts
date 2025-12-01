@@ -93,6 +93,7 @@ export async function POST(req: Request) {
 👤 *Buyer:* ${buyerDoc?.name || 'Unknown'} (${buyerDoc?.phone || 'N/A'})
 
 ℹ️ *Status:* Created (Pending Acceptance)
+👮 Admin Mobile: ${ADMIN_PHONE}
 
 🔗 *Monitor Live:* ${adminMonitorLink}`;
 

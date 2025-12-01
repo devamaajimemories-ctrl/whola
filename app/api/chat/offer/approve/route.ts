@@ -103,7 +103,8 @@ export async function POST(req: Request) {
 • Amount: ₹${amount}
 • Order ID: ${internalOrderId}
 
-🚀 Status: Redirecting Buyer to Razorpay.`;
+🚀 Status: Redirecting Buyer to Razorpay.
+👮 Admin Mobile: ${ADMIN_PHONE}`;
 
         sendNotification(ADMIN_PHONE, adminMsg);
 

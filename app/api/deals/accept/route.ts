@@ -4,8 +4,9 @@ import Request from "@/lib/models/Request";
 import Seller from "@/lib/models/Seller";
 
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
+const ADMIN_PHONE = '8448695809'; // Admin Number
 
-export const dynamic = 'force-dynamic'; // Ensure this route is never cached
+export const dynamic = 'force-dynamic'; 
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
             });
         }
 
-        // 3. Fetch the Real Seller (CRITICAL STEP YOU MISSED)
+        // 3. Fetch the Real Seller
         const seller = await Seller.findById(sellerId);
         if (!seller) return NextResponse.json({ error: "Seller account not found" });
 
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
         request.lockedBy = sellerId;
         await request.save();
 
-        // 5. Prepare Message
+        // 5. Prepare Message for Seller
         const successMessage = `✅ *Deal Locked!*
     
 You have secured the order for: ${request.product}
@@ -51,10 +52,28 @@ DO NOT share personal numbers.
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                phone: seller.phone, // <--- NOW USING REAL DATABASE PHONE
+                phone: seller.phone, 
                 message: successMessage
             })
         });
+
+        // --- ADMIN NOTIFICATION START ---
+        const adminMsg = `🤝 *MONITOR: LEAD MATCHED*
+
+A Seller has accepted a Lead!
+
+📦 Product: ${request.product}
+👤 Buyer: ${request.buyerName} (${request.buyerPhone})
+🏪 Seller: ${seller.name} (${seller.phone})
+
+🚀 Status: They are now connected. Monitor chat for disputes.`;
+
+        fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: ADMIN_PHONE, message: adminMsg })
+        }).catch(err => console.error("Admin Notify Error:", err));
+        // --- ADMIN NOTIFICATION END ---
 
         return NextResponse.json({
             success: true,

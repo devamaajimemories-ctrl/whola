@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Request from "@/lib/models/Request";
 import Seller from "@/lib/models/Seller";
-// FIX: Import the correct function name from your existing file
-import { scrapeAndSaveSellers } from "@/lib/scraper-service"; 
+import { scrapeAndSaveSellers } from "@/lib/scraper-service";
 
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
 export const dynamic = 'force-dynamic';
@@ -22,9 +21,13 @@ export async function POST(req: Request) {
         const request = await Request.findById(requestId);
         if (!request) return NextResponse.json({ success: false, error: "Request not found" });
 
-        let targetSellers = [];
+        let targetSellers: any[] = [];
 
-        // --- MODE 1: DATABASE MATCH ---
+        // =================================================
+        // 1. FIND OR CREATE SELLERS BASED ON MODE
+        // =================================================
+
+        // --- MODE A: DATABASE MATCH ---
         if (mode === 'database') {
             targetSellers = await Seller.find({
                 $or: [
@@ -35,48 +38,57 @@ export async function POST(req: Request) {
             }).limit(15);
         }
         
-        // --- MODE 2: JIT SCRAPER ---
+        // --- MODE B: JIT SCRAPER ---
         else if (mode === 'jit') {
-            // Trigger Scraper dynamically
             const query = `Wholesalers of ${request.product} in ${request.city || 'India'}`;
             console.log("Running JIT Scraper for:", query);
-            
-            // FIX: Use the correct function 'scrapeAndSaveSellers'
-            // Pass the product name as the second argument for 'categoryContext'
-            const scrapedData = await scrapeAndSaveSellers(query, request.product); 
-
-            // The scraper already saves to DB, so we just use the returned data
-            targetSellers = scrapedData || [];
+            targetSellers = await scrapeAndSaveSellers(query, request.product) || [];
         }
 
-        // --- MODE 3: MANUAL ENTRY ---
+        // --- MODE C: MANUAL ENTRY (Secure Way) ---
         else if (mode === 'manual') {
-            if (!manualData?.phone) return NextResponse.json({ success: false, error: "Phone number required for manual entry" });
+            if (!manualData?.phone) return NextResponse.json({ success: false, error: "Phone required" });
             
-            targetSellers = [{
-                name: manualData.name || 'Manual Seller',
-                phone: manualData.phone
-            }];
+            // We MUST create a Seller Record for them, otherwise they can't login/chat
+            // Check if exists first to avoid duplicates
+            let manualSeller = await Seller.findOne({ phone: manualData.phone });
+
+            if (!manualSeller) {
+                manualSeller = await Seller.create({
+                    name: manualData.name || 'Merchant',
+                    phone: manualData.phone,
+                    category: request.category || 'General',
+                    city: request.city || 'India',
+                    tags: ['Manual Entry', 'Lead Fulfillment'],
+                    isVerified: true // We trust admin input
+                });
+            }
+            targetSellers = [manualSeller];
         }
 
         if (!targetSellers || targetSellers.length === 0) {
             return NextResponse.json({ success: false, error: `No sellers found using mode: ${mode}` });
         }
 
-        // --- SEND WHATSAPP ---
-        const leadLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/dashboard/leads`;
-        const message = `🚨 *Verified Business Lead!* (Admin Approved)
-    
-📦 *Item:* ${request.product}
-📍 *Location:* ${request.city || 'India'}
-QTY: ${request.quantity}
-💰 *Budget:* ₹${request.estimatedPrice || 'Best Price'}
+        // =================================================
+        // 2. SEND NOTIFICATIONS (PRIVACY FOCUSED)
+        // =================================================
 
-A verified buyer is looking for this product. Click to unlock details:
-${leadLink}`;
+        // A. NOTIFY SELLERS (Send Link to Seller Dashboard)
+        const sellerLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/dashboard/leads`; // Link to Lead
+        
+        const sellerMessage = `📦 *New Business Opportunity!*
+        
+Item: *${request.product}*
+Qty: ${request.quantity}
+Location: ${request.city || 'India'}
 
-        const promises = targetSellers.map((seller: any) => {
-            // Clean phone number
+✅ A verified buyer is waiting. 
+👇 Click here to accept the deal & chat:
+${sellerLink}`;
+
+        const sellerPromises = targetSellers.map((seller: any) => {
+            // Clean phone
             let phone = seller.phone?.replace(/\D/g, ''); 
             if (!phone) return Promise.resolve();
             if (phone.length === 10) phone = '91' + phone; 
@@ -84,19 +96,47 @@ ${leadLink}`;
             return fetch(`${WHATSAPP_BOT_URL}/send-message`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, message })
+                body: JSON.stringify({ phone, message: sellerMessage })
             });
         });
 
-        await Promise.allSettled(promises);
+        // B. NOTIFY BUYER (Send Link to Buyer Dashboard)
+        // Only send if we actually found sellers
+        if (request.buyerPhone) {
+             let buyerPhone = request.buyerPhone.replace(/\D/g, '');
+             if (buyerPhone.length === 10) buyerPhone = '91' + buyerPhone;
 
-        // Update Status
+             const buyerLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/buyer/dashboard`;
+             const buyerMessage = `🎉 *Good News!*
+             
+We found ${targetSellers.length} sellers for your requirement: *${request.product}*.
+
+They have been notified and will contact you shortly via our secure chat.
+
+👇 Click here to track responses:
+${buyerLink}`;
+
+             sellerPromises.push(
+                 fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: buyerPhone, message: buyerMessage })
+                })
+             );
+        }
+
+        // Execute all messages
+        await Promise.allSettled(sellerPromises);
+
+        // =================================================
+        // 3. UPDATE STATUS
+        // =================================================
         request.status = "FULFILLED";
         await request.save();
 
         return NextResponse.json({ 
             success: true, 
-            message: `Success! Sent to ${targetSellers.length} sellers via ${mode} mode.` 
+            message: `Success! Notifications sent to Buyer & ${targetSellers.length} Sellers.` 
         });
 
     } catch (error) {

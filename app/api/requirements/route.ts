@@ -8,6 +8,7 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
+const ADMIN_PHONE = '8448695809'; // Admin Number
 
 // Helper to send WhatsApp notification
 async function notifySeller(seller: any, request: any) {
@@ -56,6 +57,24 @@ export async function POST(req: Request) {
 
         console.log(`📝 Requirement created: ${body.product} in ${body.city || 'India'}`);
 
+        // --- ADMIN NOTIFICATION START ---
+        const adminMsg = `🆕 *MONITOR: NEW REQUIREMENT*
+        
+📦 Product: ${body.product}
+💰 Budget: ${body.estimatedPrice}
+👤 Buyer: ${body.buyerName} (${body.buyerPhone})
+📍 City: ${body.city || 'India'}
+
+ℹ️ System is now searching for sellers...`;
+
+        // Fire and forget admin alert
+        fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: ADMIN_PHONE, message: adminMsg })
+        }).catch(err => console.error("Admin Notify Error:", err));
+        // --- ADMIN NOTIFICATION END ---
+
         // 2. SEARCH: Find existing sellers in DB
         // We use regex to match category OR product name tags
         let matchingSellers = await Seller.find({
@@ -67,7 +86,7 @@ export async function POST(req: Request) {
         }).limit(15);
 
         // 3. 🚀 SCRAPE: If not enough local sellers, go to Google Maps
-        if (matchingSellers.length < 10) { // Increased threshold to ensure coverage
+        if (matchingSellers.length < 10) { 
              const location = body.city ? `${body.city}, India` : "India";
              const query = `Wholesale ${body.product} dealers in ${location}`;
              
@@ -86,7 +105,6 @@ export async function POST(req: Request) {
         // 4. BROADCAST: Send WhatsApp to ALL found sellers (DB + Scraped)
         console.log(`📢 Broadcasting to ${matchingSellers.length} sellers...`);
         
-        // Use Promise.all to send in parallel, but limit concurrency to avoid overwhelming the bot
         const notificationPromises = matchingSellers.map(seller => notifySeller(seller, newRequest));
         await Promise.allSettled(notificationPromises);
 
