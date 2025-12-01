@@ -33,7 +33,18 @@ export async function POST(req: Request) {
 
         // 4. Find or Create User/Seller (Atomic Operation)
         let entity;
-        const updateData = { $set: { lastLogin: new Date() } };
+        // Extract optional registration fields from body
+        const { name, company, email, category, city } = body;
+
+        // Prepare update data: Always update lastLogin, optionally update profile fields if provided
+        const updateData: any = { $set: { lastLogin: new Date() } };
+
+        if (name) updateData.$set.name = name;
+        if (company) updateData.$set.companyName = company; // Mapping 'company' to 'companyName' schema field
+        if (email) updateData.$set.email = email;
+        if (category) updateData.$set.category = category;
+        if (city) updateData.$set.city = city;
+
         const options = { new: true, upsert: true, setDefaultsOnInsert: true };
 
         if (role === 'seller') {
