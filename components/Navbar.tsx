@@ -67,11 +67,11 @@ export default function Navbar() {
             {/* 1. LOGO */}
             <div className="flex-shrink-0 flex items-center">
               <Link href={homeHref} className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold text-xl">
-                  E
+                <div className="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold text-sm">
+                  YB
                 </div>
                 <span className="font-bold text-xl text-blue-900 tracking-tight hidden sm:block">
-                  ExportIndia
+                  YouthBharat WholesaleMart
                 </span>
               </Link>
             </div>
@@ -123,7 +123,7 @@ export default function Navbar() {
                 </button>
                 <div className="absolute top-[95%] right-0 w-52 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block p-2 transform transition-all origin-top-right">
                   <Link href="/register?role=seller" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
-                    Sell on ExportIndia
+                    Sell on YouthBharat
                   </Link>
                   <Link href="/login" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Seller Login
@@ -221,7 +221,7 @@ export default function Navbar() {
 
             <div className="border-t border-gray-100 pt-2 space-y-1">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-2">For Sellers</p>
-              <Link href="/register?role=seller" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-2 text-gray-700 hover:bg-gray-50 rounded font-medium">Sell on ExportIndia</Link>
+              <Link href="/register?role=seller" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-2 text-gray-700 hover:bg-gray-50 rounded font-medium">Sell on YouthBharat</Link>
               <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="block px-2 py-2 text-gray-700 hover:bg-gray-50 rounded font-medium">Seller Login</Link>
             </div>
 
