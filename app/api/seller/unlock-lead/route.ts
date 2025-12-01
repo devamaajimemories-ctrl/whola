@@ -6,6 +6,7 @@ import Transaction from '@/lib/models/Transaction';
 import { headers } from 'next/headers';
 
 const UNLOCK_COST = 50; // ₹50 to unlock one lead
+const ADMIN_SUPPORT_NUMBER = "8448695809"; // 🛡️ Admin number to prevent leakage
 
 export async function POST(req: Request) {
     try {
@@ -37,8 +38,10 @@ export async function POST(req: Request) {
                 success: true,
                 alreadyUnlocked: true,
                 data: {
-                    buyerPhone: buyerRequest.buyerPhone,
-                    buyerName: buyerRequest.buyerName
+                    // 🔒 SECURE: Return Admin number instead of Buyer number
+                    buyerPhone: ADMIN_SUPPORT_NUMBER,
+                    buyerName: buyerRequest.buyerName || "Verified Buyer",
+                    note: "Contact Admin for deal facilitation or use Chat."
                 }
             });
         }
@@ -82,16 +85,18 @@ export async function POST(req: Request) {
             $addToSet: { unlockedBy: sellerId }
         });
 
-        // 6. Return Buyer Contact Info
+        // 6. Return Masked Contact Info
         return NextResponse.json({
             success: true,
             unlocked: true,
             data: {
-                buyerPhone: buyerRequest.buyerPhone,
-                buyerName: buyerRequest.buyerName || "Anonymous Buyer",
+                // 🔒 SECURE: Return Admin number instead of Buyer number
+                buyerPhone: ADMIN_SUPPORT_NUMBER, 
+                buyerName: buyerRequest.buyerName || "Verified Buyer",
                 product: buyerRequest.product,
                 quantity: buyerRequest.quantity,
-                budget: buyerRequest.budget
+                budget: buyerRequest.budget,
+                note: "Use the 'Chat' button to contact the buyer directly through our platform."
             },
             newBalance: updatedSeller.walletBalance
         });
