@@ -194,11 +194,11 @@ export default function MessagesPage() {
                 </div>
             </header>
 
-            <div className="container mx-auto p-4 h-[calc(100vh-64px)]">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
+            <div className="container mx-auto p-4 h-auto lg:h-[calc(100vh-64px)]">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-auto lg:h-full">
 
                     {/* LEFT COLUMN: Conversations List */}
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col max-h-[300px] lg:max-h-full">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col max-h-[400px] lg:max-h-full">
                         <div className="p-4 border-b bg-gray-50">
                             <h2 className="text-lg font-semibold text-gray-800">
                                 Active Chats
@@ -239,7 +239,7 @@ export default function MessagesPage() {
                     </div>
 
                     {/* RIGHT COLUMN: Chat Window */}
-                    <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden h-[500px] lg:h-full">
+                    <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[500px] lg:min-h-0 lg:h-full">
                         {selectedSellerId && selectedConversation ? (
                             <>
                                 {/* Chat Header */}
