@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Send, MessageSquare, DollarSign, CheckCircle, Loader2, AlertTriangle } from 'lucide-react';
 
 // Interfaces (Assuming they exist or are imported correctly, defined here for context)
@@ -25,8 +25,11 @@ interface Conversation {
     unreadCount: number;
 }
 
-export default function MessagesPage() {
+function MessagesContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const urlSellerId = searchParams.get('sellerId');
+
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -59,9 +62,11 @@ export default function MessagesPage() {
             const data = await res.json();
             if (data.success) {
                 setConversations(data.data);
-                if (data.data.length > 0 && !selectedSellerId) {
+
+                // Only auto-select first if NO URL param and NO current selection
+                if (data.data.length > 0 && !selectedSellerId && !urlSellerId) {
                     setSelectedSellerId(data.data[0].partnerId);
-                    setShouldScroll(true); // Scroll on initial auto-select
+                    // setShouldScroll(true); // Don't scroll on default auto-select to avoid jumping
                 }
             }
         } catch (error) {
@@ -86,6 +91,14 @@ export default function MessagesPage() {
             setLoadingMessages(false);
         }
     };
+
+    // Handle URL Parameter for Deep Linking
+    useEffect(() => {
+        if (urlSellerId) {
+            setSelectedSellerId(urlSellerId);
+            setShouldScroll(true); // Scroll to chat when opened via link
+        }
+    }, [urlSellerId]);
 
     useEffect(() => {
         fetchConversations();
@@ -361,5 +374,13 @@ export default function MessagesPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function MessagesPage() {
+    return (
+        <Suspense fallback={<div className="flex justify-center items-center min-h-screen"><Loader2 className="animate-spin w-8 h-8 text-indigo-600" /></div>}>
+            <MessagesContent />
+        </Suspense>
     );
 }
