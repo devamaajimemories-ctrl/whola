@@ -7,11 +7,12 @@ import User from "@/lib/models/User";
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
 const ADMIN_PHONE = '8448695809';
 
-async function notifyAdmin(message: string) {
+async function sendNotification(phone: string, message: string) {
+    if(!phone) return;
     await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: ADMIN_PHONE, message })
+        body: JSON.stringify({ phone, message })
     }).catch(console.error);
 }
 
@@ -20,14 +21,14 @@ export async function POST(req: Request) {
         await dbConnect();
         const { messageId } = await req.json();
 
-        // 1. Find & Update
+        // 1. Find & Update Original Proposal
         const originalMsg = await Chat.findById(messageId);
         if (!originalMsg) return NextResponse.json({ success: false });
 
         originalMsg.offerStatus = 'ACCEPTED';
         await originalMsg.save();
 
-        // 2. Create Confirmation Message
+        // 2. Create Confirmation Message (This becomes the "Bill" for the buyer)
         await Chat.create({
             sellerId: originalMsg.sellerId,
             userId: originalMsg.userId,
@@ -35,27 +36,40 @@ export async function POST(req: Request) {
             message: `✅ **OFFER ACCEPTED**\n\nSeller agreed to ₹${originalMsg.offerAmount}.\nBuyer can now pay.`,
             type: 'OFFER',
             offerAmount: originalMsg.offerAmount,
-            offerStatus: 'PENDING' // Pending Payment
+            offerStatus: 'PENDING' // Pending Payment from Buyer
         });
 
         // 3. Fetch Info
         const seller = await Seller.findById(originalMsg.sellerId).select('name phone');
         const buyer = await User.findById(originalMsg.userId).select('name phone');
 
-        // 👮 ADMIN NOTIFICATION - ACCEPTED DEAL
-        const adminMsg = `🤝 *MONITOR: DEAL ACCEPTED*
+        // 4. NOTIFICATIONS
 
-✅ Seller Accepted Buyer's Price!
+        // A. Notify BUYER (Seller Accepted + Chat Link)
+        const chatLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/buyer/messages?sellerId=${originalMsg.sellerId}`;
+        const buyerMsg = `🤝 *Proposal Accepted!*
 
-💰 *Agreed Amount:* ₹${originalMsg.offerAmount}
+The Seller (${seller?.name}) has accepted your price of ₹${originalMsg.offerAmount}.
 
-Parties:
-🏪 Seller: ${seller?.name} (${seller?.phone})
-👤 Buyer: ${buyer?.name} (${buyer?.phone})
+👇 *Click below to Pay & Seal the Deal:*
+${chatLink}`;
 
-🚀 *Status:* Waiting for Payment via Razorpay.`;
+        if(buyer?.phone) {
+            await sendNotification(buyer.phone, buyerMsg);
+        }
 
-        await notifyAdmin(adminMsg);
+        // B. Notify ADMIN
+        const adminMsg = `🤝 *MONITOR: SELLER ACCEPTED PROPOSAL*
+
+✅ Seller agreed to Buyer's price.
+
+💰 *Amount:* ₹${originalMsg.offerAmount}
+🏪 Seller: ${seller?.name}
+👤 Buyer: ${buyer?.name}
+
+🚀 Status: Waiting for Buyer to make payment.`;
+
+        await sendNotification(ADMIN_PHONE, adminMsg);
 
         return NextResponse.json({ success: true });
 

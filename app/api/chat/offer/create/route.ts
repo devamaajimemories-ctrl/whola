@@ -9,11 +9,12 @@ const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000'
 const ADMIN_PHONE = '8448695809';
 
 // Notification Helper
-async function notifyAdmin(message: string) {
+async function sendNotification(phone: string, message: string) {
+    if(!phone) return;
     await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: ADMIN_PHONE, message })
+        body: JSON.stringify({ phone, message })
     }).catch(console.error);
 }
 
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
         let realSellerId = sender === 'seller' ? authUserId : sellerId;
         let realBuyerId = sender === 'seller' ? sellerId : authUserId;
 
-        // Fetch Names for Admin Log
+        // Fetch Names
         const sellerDoc = await Seller.findById(realSellerId).select('name phone');
         const buyerDoc = await User.findById(realBuyerId).select('name phone');
 
@@ -47,22 +48,49 @@ export async function POST(req: Request) {
             message: messageText,
             type: 'OFFER',
             offerAmount: amount,
-            offerStatus: 'PENDING' // Indicates NOT ACCEPTED YET
+            offerStatus: 'PENDING' 
         });
 
-        // 👮 ADMIN NOTIFICATION - PENDING DEAL
-        const adminMsg = `👮 *MONITOR: PENDING DEAL (Not Accepted Yet)*
+        // --- NOTIFICATIONS ---
 
-💰 *Proposed Amount:* ₹${amount}
-📝 *Status:* Waiting for ${sender === 'seller' ? 'Buyer' : 'Seller'} acceptance.
+        const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL;
 
-Details:
-🏪 Seller: ${sellerDoc?.name} (${sellerDoc?.phone})
-👤 Buyer: ${buyerDoc?.name} (${buyerDoc?.phone})
+        // 1. If BUYER proposes -> Notify SELLER
+        if (sender === 'user' && sellerDoc?.phone) {
+            const link = `${websiteUrl}/seller/messages?buyerId=${realBuyerId}`;
+            const msg = `📢 *New Price Proposal!*
+            
+Buyer (${buyerDoc?.name}) proposed: ₹${amount}
+ for ${description}.
 
-⚠️ *Action:* Monitor chat for disputes.`;
+👇 *Click to Accept or Counter:*
+${link}`;
+            await sendNotification(sellerDoc.phone, msg);
+        }
 
-        await notifyAdmin(adminMsg);
+        // 2. If SELLER offers -> Notify BUYER
+        if (sender === 'seller' && buyerDoc?.phone) {
+            const link = `${websiteUrl}/buyer/messages?sellerId=${realSellerId}`;
+            const msg = `🏷️ *New Offer from Seller!*
+            
+Seller (${sellerDoc?.name}) offered: ₹${amount}
+ for ${description}.
+
+👇 *Click to Approve & Pay:*
+${link}`;
+            await sendNotification(buyerDoc.phone, msg);
+        }
+
+        // 3. Notify ADMIN
+        const adminMsg = `👮 *MONITOR: NEW ${sender === 'seller' ? 'OFFER' : 'PROPOSAL'}*
+
+💰 Amount: ₹${amount}
+📝 Status: Pending Acceptance
+
+Seller: ${sellerDoc?.name}
+Buyer: ${buyerDoc?.name}`;
+
+        await sendNotification(ADMIN_PHONE, adminMsg);
 
         return NextResponse.json({ success: true, data: offerMessage });
 

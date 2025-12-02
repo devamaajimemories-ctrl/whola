@@ -72,7 +72,7 @@ function BuyerChatInterface() {
         } catch (e) { console.error(e); }
     };
 
-    // Check for Active Order (To show "Task Completed" button)
+    // Check for Active Order
     const checkActiveOrder = async (sellerId: string) => {
         try {
             const res = await fetch(`/api/orders/check-active?sellerId=${sellerId}`);
@@ -99,11 +99,11 @@ function BuyerChatInterface() {
                 setIsVerified(conv.seller.isVerified);
             }
             fetchMessages(activeSellerId);
-            checkActiveOrder(activeSellerId); // Check order status
+            checkActiveOrder(activeSellerId); 
 
             const interval = setInterval(() => {
                 fetchMessages(activeSellerId);
-                checkActiveOrder(activeSellerId); // Poll order status
+                checkActiveOrder(activeSellerId);
             }, 3000);
             return () => clearInterval(interval);
         }
@@ -152,7 +152,7 @@ function BuyerChatInterface() {
         } catch (e) { alert("Failed to send proposal"); }
     };
 
-    // PAY (Generates Link & Notifies Seller)
+    // PAY 
     const handlePay = async (messageId: string) => {
         if(!confirm("Approve this deal and proceed to payment?")) return;
         try {
@@ -170,7 +170,7 @@ function BuyerChatInterface() {
         } catch (e) { alert("Payment error"); }
     };
 
-    // MARK TASK COMPLETED (Triggers Payout)
+    // MARK TASK COMPLETED 
     const handleTaskCompleted = async () => {
         if(!activeOrder) return;
         if(!confirm(`Confirm that you received the order (${activeOrder.orderId})? This will release payment to the seller.`)) return;
@@ -185,7 +185,7 @@ function BuyerChatInterface() {
             const data = await res.json();
             if(data.success) {
                 alert("Success! Order marked as complete and payment released to seller.");
-                setActiveOrder(null); // Hide button
+                setActiveOrder(null); 
             } else {
                 alert(data.error || "Failed to confirm.");
             }
@@ -236,6 +236,27 @@ function BuyerChatInterface() {
                             </div>
                         </header>
 
+                        {/* --- TOP BANNER: TASK COMPLETED --- */}
+                        {/* Only shown when an order is active */}
+                        {activeOrder && (
+                            <div className="bg-green-100 border-b border-green-200 px-4 py-3 flex items-center justify-between z-10 shadow-sm">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-green-200 rounded-full"><CheckCircle size={16} className="text-green-700"/></div>
+                                    <div>
+                                        <p className="text-sm font-bold text-green-800">Order Active: #{activeOrder.orderId}</p>
+                                        <p className="text-xs text-green-700">Once you receive the item, mark as completed.</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={handleTaskCompleted}
+                                    disabled={completingTask}
+                                    className="bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 shadow-sm whitespace-nowrap"
+                                >
+                                    {completingTask ? <Loader2 size={14} className="animate-spin"/> : "Mark Completed"}
+                                </button>
+                            </div>
+                        )}
+
                         <div className="flex-1 overflow-y-auto p-4 md:px-16" ref={scrollRef} style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')", backgroundBlendMode: 'overlay' }}>
                             {messages.map((msg) => (
                                 <div key={msg._id} className={`flex mb-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -265,8 +286,7 @@ function BuyerChatInterface() {
                             ))}
                         </div>
 
-                        {/* === ACTION AREA: APPROVE & PAY or MARK COMPLETED === */}
-                        
+                        {/* --- BOTTOM ACTION: APPROVE & PAY (Always available for new deals) --- */}
                         {showDealInput && (
                             <div className="p-3 bg-white border-t border-gray-200 animate-in slide-in-from-bottom-2">
                                 <div className="flex justify-between items-center mb-2">
@@ -288,24 +308,12 @@ function BuyerChatInterface() {
 
                         <footer className="bg-[#f0f2f5] min-h-[62px] px-4 py-2 flex items-center gap-3 z-10">
                             
-                            {/* DYNAMIC BUTTON: Switches based on order status */}
-                            {activeOrder ? (
-                                <button 
-                                    onClick={handleTaskCompleted}
-                                    disabled={completingTask}
-                                    className="bg-green-600 border border-green-700 text-white px-3 py-2 rounded-full text-xs font-bold hover:bg-green-700 shadow-sm whitespace-nowrap flex items-center gap-1 animate-pulse"
-                                >
-                                    {completingTask ? <Loader2 size={14} className="animate-spin"/> : <CheckCircle size={14} />} 
-                                    Task Completed
-                                </button>
-                            ) : (
-                                <button 
-                                    onClick={() => setShowDealInput(!showDealInput)}
-                                    className="bg-white border border-gray-300 text-green-700 px-3 py-2 rounded-full text-xs font-bold hover:bg-green-50 shadow-sm whitespace-nowrap"
-                                >
-                                    Approve & Pay
-                                </button>
-                            )}
+                            <button 
+                                onClick={() => setShowDealInput(!showDealInput)}
+                                className="bg-white border border-gray-300 text-green-700 px-3 py-2 rounded-full text-xs font-bold hover:bg-green-50 shadow-sm whitespace-nowrap"
+                            >
+                                Approve & Pay
+                            </button>
 
                             <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2">
                                 <input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message" className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-0" />

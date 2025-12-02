@@ -12,6 +12,7 @@ const ADMIN_PHONE = '8448695809';
 
 // Notifications Helper
 async function sendNotification(phone: string, message: string) {
+    if(!phone) return;
     await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,33 +88,37 @@ export async function POST(req: Request) {
         offerMsg.paymentLink = response.short_url;
         await offerMsg.save();
 
-        // 6. NOTIFICATIONS & BANK LINK FOR SELLER
-        
-        // Prepare Bank Details Link
+        // 6. NOTIFICATIONS
+
+        // A. Notify SELLER (Deal Finalized + Add Bank Details Link)
         const bankDetailsLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/add-bank-details?orderId=${internalOrderId}`;
-
-        // Message to Seller
-        const sellerMsg = `🎉 *Deal Finalized!*\nOrder #${internalOrderId} - Value: ₹${amount}.\n\n💵 *Your Net Payout (95%):* ₹${sellerShare}\n\n⚠️ *IMPORTANT:* Please ensure your bank details are added so we can transfer funds immediately after delivery.\n\n👇 *Add Bank Details:* \n${bankDetailsLink}`;
+        const sellerMsg = `🎉 *Deal Approved by Buyer!*
         
-        sendNotification(seller.phone, sellerMsg);
+📦 Order: #${internalOrderId}
+💰 Value: ₹${amount}
+💵 *Your Net Payout:* ₹${sellerShare}
 
-        // Message to Admin
-        const adminMsg = `💰 *MONITOR: PAYMENT STARTED*
+Buyer has approved and is processing payment.
+⚠️ *Action Required:* Ensure your bank details are added for instant payout.
 
-✅ Buyer Approved & Clicked Pay.
-✅ Seller sent Bank Details Link.
+👇 *Add Bank Details:* ${bankDetailsLink}`;
+        
+        await sendNotification(seller.phone, sellerMsg);
 
-📊 *Deal Details:*
-• Buyer: ${buyerName}
+        // B. Notify ADMIN
+        const adminMsg = `💰 *MONITOR: BUYER APPROVED DEAL*
+
+✅ Buyer (${buyerName}) clicked "Approve & Pay".
+✅ Payment Link Generated.
+
+📊 *Details:*
 • Seller: ${seller.name}
 • Amount: ₹${amount}
-• Net Payout: ₹${sellerShare}
 • Order ID: ${internalOrderId}
 
-🚀 Status: Waiting for Payment.
-👮 Admin Mobile: ${ADMIN_PHONE}`;
+🔗 Link sent to Seller for Bank Details.`;
 
-        sendNotification(ADMIN_PHONE, adminMsg);
+        await sendNotification(ADMIN_PHONE, adminMsg);
 
         return NextResponse.json({ success: true, link: response.short_url });
 
