@@ -3,66 +3,59 @@ import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 
 export async function middleware(request: NextRequest) {
-    // 1. Get the token from cookies
     const token = request.cookies.get('auth_token')?.value;
+    const path = request.nextUrl.pathname;
 
-    // 2. Define protected routes (Seller & Buyer Dashboards & APIs)
-    const isProtectedRoute =
-        request.nextUrl.pathname.startsWith('/seller') ||
-        request.nextUrl.pathname.startsWith('/buyer') ||
-        request.nextUrl.pathname.startsWith('/api/seller') ||
-        request.nextUrl.pathname.startsWith('/api/buyer') ||
-        request.nextUrl.pathname.startsWith('/api/products') ||
-        request.nextUrl.pathname.startsWith('/api/chat') ||
-        request.nextUrl.pathname.startsWith('/api/requirements') || // <--- ADDED: Protect this route
-        request.nextUrl.pathname.startsWith('/admin');
+    // 1. Define Routes
+    const isAdminRoute = path.startsWith('/admin');
+    const isAdminLogin = path === '/admin/login';
+    const isSellerRoute = path.startsWith('/seller');
+    const isBuyerRoute = path.startsWith('/buyer');
 
-    // 3. Redirect to Login if no token on protected routes
-    if (isProtectedRoute && !token) {
-        // If it's an API call, return JSON error
-        if (request.nextUrl.pathname.startsWith('/api/')) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    // 2. Allow public access to Admin Login
+    if (isAdminLogin) {
+        // If already logged in as admin, redirect to dashboard
+        if (token) {
+            const payload = await verifyToken(token);
+            if (payload?.role === 'admin') {
+                return NextResponse.redirect(new URL('/admin/requirements', request.url));
+            }
         }
-        // If it's a Page, redirect to Login
+        return NextResponse.next();
+    }
+
+    // 3. Protect Admin Dashboard
+    if (isAdminRoute) {
+        if (!token) {
+            return NextResponse.redirect(new URL('/admin/login', request.url));
+        }
+        
+        const payload = await verifyToken(token);
+        if (!payload || payload.role !== 'admin') {
+            // Logged in but NOT an admin? Redirect to their respective home or login
+            return NextResponse.redirect(new URL('/admin/login', request.url));
+        }
+    }
+
+    // 4. Protect Seller/Buyer Routes (Existing Logic)
+    if ((isSellerRoute || isBuyerRoute) && !token) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // 4. Verify Token and Set Headers for API
+    // 5. Attach User ID for API Routes
     if (token) {
         const payload = await verifyToken(token);
-
-        if (!payload) {
-            // Invalid token - clear it and redirect
-            const response = NextResponse.redirect(new URL('/login', request.url));
-            response.cookies.delete('auth_token');
-            return response;
+        if (payload) {
+            const requestHeaders = new Headers(request.headers);
+            requestHeaders.set('x-user-id', payload.userId as string);
+            requestHeaders.set('x-user-role', payload.role as string);
+            return NextResponse.next({ request: { headers: requestHeaders } });
         }
-
-        // 5. Pass User ID to the Backend (This makes your API work!)
-        const requestHeaders = new Headers(request.headers);
-        requestHeaders.set('x-user-id', payload.userId as string);
-        requestHeaders.set('x-user-role', payload.role as string);
-
-        return NextResponse.next({
-            request: {
-                headers: requestHeaders,
-            },
-        });
     }
 
     return NextResponse.next();
 }
 
-// Configure which paths the middleware runs on
 export const config = {
-    matcher: [
-        '/seller/:path*',
-        '/buyer/:path*',
-        '/api/seller/:path*',
-        '/api/buyer/:path*',
-        '/api/products/:path*',
-        '/api/chat/:path*', 
-        '/api/requirements/:path*', // <--- ADDED to Matcher
-        '/admin/:path*',
-    ],
+    matcher: ['/seller/:path*', '/buyer/:path*', '/admin/:path*', '/api/:path*'],
 };
