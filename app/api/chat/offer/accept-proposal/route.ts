@@ -21,14 +21,14 @@ export async function POST(req: Request) {
         await dbConnect();
         const { messageId } = await req.json();
 
-        // 1. Find & Update Original Proposal
+        // 1. Update Chat
         const originalMsg = await Chat.findById(messageId);
         if (!originalMsg) return NextResponse.json({ success: false });
 
         originalMsg.offerStatus = 'ACCEPTED';
         await originalMsg.save();
 
-        // 2. Create Confirmation Message (This becomes the "Bill" for the buyer)
+        // 2. Create Confirmation Msg
         await Chat.create({
             sellerId: originalMsg.sellerId,
             userId: originalMsg.userId,
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
             message: `✅ **OFFER ACCEPTED**\n\nSeller agreed to ₹${originalMsg.offerAmount}.\nBuyer can now pay.`,
             type: 'OFFER',
             offerAmount: originalMsg.offerAmount,
-            offerStatus: 'PENDING' // Pending Payment from Buyer
+            offerStatus: 'PENDING'
         });
 
         // 3. Fetch Info
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
         // 4. NOTIFICATIONS
 
-        // A. Notify BUYER (Seller Accepted + Chat Link)
+        // A. Buyer Notification
         const chatLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/buyer/messages?sellerId=${originalMsg.sellerId}`;
         const buyerMsg = `🤝 *Proposal Accepted!*
 
@@ -58,16 +58,16 @@ ${chatLink}`;
             await sendNotification(buyer.phone, buyerMsg);
         }
 
-        // B. Notify ADMIN
+        // B. Admin Notification
         const adminMsg = `🤝 *MONITOR: SELLER ACCEPTED PROPOSAL*
 
 ✅ Seller agreed to Buyer's price.
+Amount: ₹${originalMsg.offerAmount}
 
-💰 *Amount:* ₹${originalMsg.offerAmount}
-🏪 Seller: ${seller?.name}
-👤 Buyer: ${buyer?.name}
+Seller: ${seller?.name}
+Buyer: ${buyer?.name}
 
-🚀 Status: Waiting for Buyer to make payment.`;
+Status: Waiting for Buyer payment.`;
 
         await sendNotification(ADMIN_PHONE, adminMsg);
 

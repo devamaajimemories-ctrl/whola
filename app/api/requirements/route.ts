@@ -8,14 +8,14 @@ export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
-const ADMIN_PHONE = '8448695809'; // Your Admin Number
+const ADMIN_PHONE = '8448695809';
 
 export async function POST(req: Request) {
     try {
         await dbConnect();
         const body = await req.json();
 
-        // 1. AUTHENTICATION CHECK
+        // 1. AUTH
         const headersList = await headers();
         const userId = headersList.get('x-user-id');
 
@@ -32,11 +32,8 @@ export async function POST(req: Request) {
              return NextResponse.json({ success: false, error: "Product name is missing" }, { status: 400 });
         }
 
-        // 2. SAVE REQUIREMENT (Status: OPEN for Admin Review)
-        // We do NOT broadcast to sellers here. We wait for Admin approval.
-        
-        // FIX: Added ': any' type to prevent TypeScript error
-        const newRequest: any = await RequestModel.create({ 
+        // 2. SAVE REQ
+        const newRequest = await RequestModel.create({ 
              ...body,
              buyerName: buyer.name,
              buyerPhone: buyer.phone,
@@ -45,17 +42,15 @@ export async function POST(req: Request) {
              createdAt: new Date()
         });
 
-        console.log(`📝 Requirement Saved (Pending Admin): ${newRequest.product}`);
-
-        // 3. NOTIFY ADMIN ONLY
-        const adminMsg = `🆕 *PENDING APPROVAL: NEW REQUIREMENT*
+        // 3. NOTIFY ADMIN
+        const adminMsg = `👮 *PENDING APPROVAL: NEW REQUIREMENT*
         
 📦 Product: ${body.product}
 💰 Budget: ${body.estimatedPrice}
 👤 Buyer: ${buyer.name} (${buyer.phone})
 📍 City: ${body.city || 'India'}
 
-👉 Login to Admin Dashboard to Approve & Connect Sellers.`;
+👇 Login to Admin Dashboard to Approve & Connect Sellers.`;
 
         await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
             method: 'POST',
@@ -65,7 +60,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({
             success: true,
-            message: "Requirement posted! Waiting for admin approval to match sellers.",
+            message: "Requirement posted! Waiting for admin approval.",
             data: newRequest
         });
 
