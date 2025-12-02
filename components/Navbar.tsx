@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, LogOut, LayoutDashboard, Search, PlusCircle, ChevronDown, TrendingUp } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, Search, PlusCircle, ChevronDown, TrendingUp, MessageCircle } from 'lucide-react';
 import PostRequirementModal from '@/components/PostRequirementModal';
 import { industrialProducts } from '@/lib/industrialData';
 
@@ -180,7 +180,7 @@ export default function Navbar() {
             {/* 3. DESKTOP ACTIONS (Smaller & Compact) */}
             <div className="hidden md:flex md:items-center md:space-x-1 flex-shrink-0">
 
-              {/* For Buyer */}
+              {/* For Buyer Dropdown */}
               <div className="relative group h-16 flex items-center px-2">
                 <button className="flex items-center gap-1 text-gray-600 hover:text-blue-600 font-medium text-sm transition-colors">
                   For Buyers <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300"/>
@@ -192,13 +192,17 @@ export default function Navbar() {
                   <Link href="/search" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Browse Suppliers
                   </Link>
+                  {/* Added Buyer Messages Option */}
+                  <Link href="/buyer/messages" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium flex items-center gap-2">
+                     <MessageCircle size={16}/> Messages
+                  </Link>
                   <Link href="/how-it-works" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     How It Works
                   </Link>
                 </div>
               </div>
 
-              {/* For Seller */}
+              {/* For Seller Dropdown */}
               <div className="relative group h-16 flex items-center px-2">
                 <button className="flex items-center gap-1 text-gray-600 hover:text-blue-600 font-medium text-sm transition-colors">
                   For Sellers <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300"/>
@@ -209,6 +213,10 @@ export default function Navbar() {
                   </Link>
                   <Link href="/login" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Seller Login
+                  </Link>
+                  {/* Added Seller Messages Option */}
+                  <Link href="/seller/messages" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium flex items-center gap-2">
+                     <MessageCircle size={16}/> Seller Messages
                   </Link>
                   <Link href="/seller/pricing" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Membership Plans
@@ -298,11 +306,13 @@ export default function Navbar() {
             <div className="border-t border-gray-100 pt-4 space-y-2">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-1">For Buyers</p>
               <Link href="/search" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Browse Suppliers</Link>
+              <Link href="/buyer/messages" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Messages</Link>
             </div>
              <div className="border-t border-gray-100 pt-4 space-y-2">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-1">For Sellers</p>
               <Link href="/register?role=seller" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Sell on YouthBharat</Link>
               <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Seller Login</Link>
+              <Link href="/seller/messages" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Seller Messages</Link>
             </div>
             
             <div className="border-t border-gray-100 pt-6 pb-4 mt-auto">
