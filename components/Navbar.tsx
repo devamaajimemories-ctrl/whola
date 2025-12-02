@@ -192,13 +192,22 @@ export default function Navbar() {
                   <Link href="/search" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Browse Suppliers
                   </Link>
-                  {/* Added Buyer Messages Option */}
                   <Link href="/buyer/messages" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium flex items-center gap-2">
                      <MessageCircle size={16}/> Messages
                   </Link>
                   <Link href="/how-it-works" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     How It Works
                   </Link>
+                  
+                  {/* ADDED: Buyer Logout Button */}
+                  {user?.role === 'buyer' && (
+                    <button 
+                      onClick={handleLogout} 
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors font-medium flex items-center gap-2 border-t border-gray-100 mt-1"
+                    >
+                      <LogOut size={16}/> Logout
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -214,13 +223,22 @@ export default function Navbar() {
                   <Link href="/login" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Seller Login
                   </Link>
-                  {/* Added Seller Messages Option */}
                   <Link href="/seller/messages" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium flex items-center gap-2">
                      <MessageCircle size={16}/> Seller Messages
                   </Link>
                   <Link href="/seller/pricing" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Membership Plans
                   </Link>
+
+                  {/* ADDED: Seller Logout Button */}
+                  {user?.role === 'seller' && (
+                    <button 
+                      onClick={handleLogout} 
+                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors font-medium flex items-center gap-2 border-t border-gray-100 mt-1"
+                    >
+                      <LogOut size={16}/> Logout
+                    </button>
+                  )}
                 </div>
               </div>
 
