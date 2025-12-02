@@ -5,10 +5,10 @@ import Chat from "@/lib/models/Chat";
 import Seller from "@/lib/models/Seller";
 import User from "@/lib/models/User";
 
-// Admin Config
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
 const ADMIN_PHONE = '8448695809';
 
+// Notification Helper
 async function notifyAdmin(message: string) {
     await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
         method: 'POST',
@@ -20,48 +20,26 @@ async function notifyAdmin(message: string) {
 export async function POST(req: Request) {
     try {
         await dbConnect();
-        // sellerId in body might be the partner ID depending on context
-        const { sellerId, amount, description, sender } = await req.json(); // sender: 'user' or 'seller'
+        const { sellerId, amount, description, sender } = await req.json();
 
-        // 1. Get User ID from headers (Secure)
+        // Auth
         const headersList = await headers();
         const authUserId = headersList.get('x-user-id');
+        if (!authUserId) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-        if (!authUserId) {
-            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-        }
+        // Resolve IDs
+        let realSellerId = sender === 'seller' ? authUserId : sellerId;
+        let realBuyerId = sender === 'seller' ? sellerId : authUserId;
 
-        if (!amount || isNaN(amount)) {
-            return NextResponse.json({ success: false, error: "Invalid Amount" });
-        }
-        if (!description || description.trim().length === 0) {
-            return NextResponse.json({ success: false, error: "Description is required" });
-        }
+        // Fetch Names for Admin Log
+        const sellerDoc = await Seller.findById(realSellerId).select('name phone');
+        const buyerDoc = await User.findById(realBuyerId).select('name phone');
 
-        // 2. Resolve Real IDs based on Sender Context
-        // The Chat Model enforces: sellerId = The Seller, userId = The Buyer
-        let realSellerId = "";
-        let realBuyerId = "";
+        // Create Message
+        const messageText = sender === 'seller' 
+            ? `🤝 **SELLER OFFER**\n📦 Item: ${description}\n💰 Final Price: ₹${amount}\n\nWaiting for Buyer to Approve & Pay.`
+            : `🙋‍♂️ **BUYER PROPOSAL**\n📦 Item: ${description}\n💰 Proposed Price: ₹${amount}\n\nWaiting for Seller to Accept.`;
 
-        if (sender === 'seller') {
-            // If Sender is Seller: AuthUser is Seller, Body's sellerId is actually the Buyer
-            realSellerId = authUserId;
-            realBuyerId = sellerId;
-        } else {
-            // If Sender is User: AuthUser is Buyer, Body's sellerId is the Seller
-            realSellerId = sellerId;
-            realBuyerId = authUserId;
-        }
-
-        // Determine Message Text based on Sender
-        let messageText = "";
-        if (sender === 'seller') {
-            messageText = `🤝 **SELLER OFFER**\n📦 Item: ${description}\n💰 Price: ₹${amount}\n\nBuyer, do you accept?`;
-        } else {
-            messageText = `🙋‍♂️ **BUYER PROPOSAL**\n📦 Item: ${description}\n💰 Proposed Price: ₹${amount}\n\nSeller, do you accept?`;
-        }
-
-        // 3. Save to DB
         const offerMessage = await Chat.create({
             sellerId: realSellerId,
             userId: realBuyerId,
@@ -69,40 +47,26 @@ export async function POST(req: Request) {
             message: messageText,
             type: 'OFFER',
             offerAmount: amount,
-            offerStatus: 'PENDING'
+            offerStatus: 'PENDING' // Indicates NOT ACCEPTED YET
         });
 
-        // 4. 👮 ADMIN MONITORING NOTIFICATION
-        // Fetch Names for clear reporting
-        const sellerDoc = await Seller.findById(realSellerId).select('name phone');
-        const buyerDoc = await User.findById(realBuyerId).select('name phone');
+        // 👮 ADMIN NOTIFICATION - PENDING DEAL
+        const adminMsg = `👮 *MONITOR: PENDING DEAL (Not Accepted Yet)*
 
-        const typeLabel = sender === 'seller' ? "🆕 SELLER OFFER" : "✋ BUYER PROPOSAL";
+💰 *Proposed Amount:* ₹${amount}
+📝 *Status:* Waiting for ${sender === 'seller' ? 'Buyer' : 'Seller'} acceptance.
 
-        // Admin monitoring link (no login required)
-        const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL;
-        const adminToken = process.env.ADMIN_MONITOR_TOKEN || 'admin123secure';
-        const adminMonitorLink = `${websiteUrl}/admin/monitor?token=${adminToken}&buyerId=${realBuyerId}&sellerId=${realSellerId}`;
+Details:
+🏪 Seller: ${sellerDoc?.name} (${sellerDoc?.phone})
+👤 Buyer: ${buyerDoc?.name} (${buyerDoc?.phone})
 
-        const adminMsg = `👮 *MONITOR: ${typeLabel}*
+⚠️ *Action:* Monitor chat for disputes.`;
 
-💰 *Amount:* ₹${amount}
-📝 *Item:* ${description}
-
-🏪 *Seller:* ${sellerDoc?.name || 'Unknown'} (${sellerDoc?.phone || 'N/A'})
-👤 *Buyer:* ${buyerDoc?.name || 'Unknown'} (${buyerDoc?.phone || 'N/A'})
-
-ℹ️ *Status:* Created (Pending Acceptance)
-👮 Admin Mobile: ${ADMIN_PHONE}
-
-🔗 *Monitor Live:* ${adminMonitorLink}`;
-
-        notifyAdmin(adminMsg);
+        await notifyAdmin(adminMsg);
 
         return NextResponse.json({ success: true, data: offerMessage });
 
     } catch (error) {
-        console.error("Offer Create Error:", error);
         return NextResponse.json({ success: false, error: "Server Error" });
     }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, SendHorizontal, ShieldCheck, DollarSign, CheckCircle, Loader2, Truck, Gavel } from 'lucide-react';
+import { X, SendHorizontal, ShieldCheck, Loader2 } from 'lucide-react';
 
 interface ChatModalProps {
     isOpen: boolean;
@@ -24,23 +24,17 @@ interface Message {
 const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sellerId, isSellerView = false }) => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
-    const [dealAmount, setDealAmount] = useState("");
-    const [dealDesc, setDealDesc] = useState("");
-    const [showDealInput, setShowDealInput] = useState(false);
-    const [showQuickOffer, setShowQuickOffer] = useState(false);
-    const [quickOfferAmount, setQuickOfferAmount] = useState("");
-    const [processingId, setProcessingId] = useState<string | null>(null);
+    
+    // New Deal States
+    const [showInput, setShowInput] = useState(false);
+    const [amount, setAmount] = useState("");
+    
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const fetchHistory = () => {
         if (sellerId) {
-            const endpoint = isSellerView
-                ? `/api/chat/seller-history?buyerId=${sellerId}`
-                : `/api/chat/history?sellerId=${sellerId}`;
-
-            fetch(endpoint)
-                .then(res => res.json())
-                .then(data => { if (data.success) setMessages(data.data); });
+            const endpoint = isSellerView ? `/api/chat/seller-history?buyerId=${sellerId}` : `/api/chat/history?sellerId=${sellerId}`;
+            fetch(endpoint).then(res => res.json()).then(data => { if (data.success) setMessages(data.data); });
         }
     };
 
@@ -50,174 +44,99 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sell
             const interval = setInterval(fetchHistory, 3000);
             return () => clearInterval(interval);
         }
-    }, [isOpen, sellerId, isSellerView]);
+    }, [isOpen, sellerId]);
 
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
+    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
     const handleSend = async () => {
         if (!newMessage.trim()) return;
-
         const endpoint = isSellerView ? '/api/chat/seller-send' : '/api/chat/send';
-        const body = isSellerView
-            ? { buyerId: sellerId, message: newMessage }
-            : { sellerId, message: newMessage };
-
-        await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
+        const body = isSellerView ? { buyerId: sellerId, message: newMessage } : { sellerId, message: newMessage };
+        await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
         setNewMessage("");
         fetchHistory();
     };
 
-    const handleCreateProposal = async () => {
-        if (!dealAmount || isNaN(Number(dealAmount))) return alert("Invalid Price");
-        if (!dealDesc.trim()) return alert("Please enter a description");
+    // Handles both "Approve & Pay" (Buyer) and "Accept Deal" (Seller) actions
+    const handleDealAction = async () => {
+        if (!amount || isNaN(Number(amount))) return alert("Invalid Amount");
 
-        const res = await fetch('/api/chat/offer/create', {
+        await fetch('/api/chat/offer/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                sellerId,
-                amount: Number(dealAmount),
-                description: dealDesc,
+                sellerId, // Target ID
+                amount: Number(amount),
+                description: isSellerView ? `Seller Accepted: ₹${amount}` : `Buyer Proposed: ₹${amount}`,
                 sender: isSellerView ? 'seller' : 'user'
             })
         });
-
-        if (res.ok) {
-            setShowDealInput(false);
-            setDealAmount("");
-            setDealDesc("");
-            fetchHistory();
-        } else {
-            const data = await res.json();
-            alert(data.error || "Failed to create offer.");
-        }
+        setAmount("");
+        setShowInput(false);
+        fetchHistory();
     };
 
-    const handleSellerAccept = async (messageId: string) => {
-        if (!confirm("Accept this buyer's proposal and convert it into a final offer?")) return;
-        setProcessingId(messageId);
-
-        const res = await fetch('/api/chat/offer/accept-proposal', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messageId })
-        });
-
-        if (res.ok) {
-            alert("Proposal accepted. Waiting for the buyer to Approve & Pay.");
-            fetchHistory();
-        } else {
-            alert("Failed to accept proposal.");
-        }
-        setProcessingId(null);
-    };
-
-    const handleApprovePay = async (messageId: string) => {
-        if (!confirm("Approve this deal and proceed to payment via Razorpay? This will initiate the escrow process.")) return;
-        setProcessingId(messageId);
-
+    // Buyer pays for a confirmed deal
+    const handlePay = async (messageId: string) => {
         const res = await fetch('/api/chat/offer/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messageId, sellerId })
         });
-
         const data = await res.json();
+        if (data.link) window.open(data.link, '_blank');
+    };
 
-        if (res.ok && data.link) {
-            window.open(data.link, '_blank');
-        } else {
-            alert(data.error || "Failed to generate payment link.");
-        }
-        setProcessingId(null);
+    // Seller confirms a buyer's proposal
+    const handleAcceptProposal = async (messageId: string) => {
+        await fetch('/api/chat/offer/accept-proposal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messageId })
+        });
+        fetchHistory();
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-50 sm:p-4 backdrop-blur-sm">
-            <div className="bg-white w-full sm:max-w-md sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[650px] max-h-screen">
-
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4 backdrop-blur-sm">
+            <div className="bg-white w-full sm:max-w-md sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-[650px]">
+                
                 {/* Header */}
-                <div className="bg-gradient-to-r from-blue-800 to-blue-900 p-4 flex justify-between items-center text-white shadow-md flex-shrink-0">
+                <div className="bg-blue-900 p-4 flex justify-between items-center text-white shadow-md shrink-0">
                     <div>
                         <h3 className="font-bold text-lg">{sellerName}</h3>
-                        <p className="text-xs text-blue-200 flex items-center opacity-80">
-                            <ShieldCheck size={12} className="mr-1" /> Verified Trade Chat
-                        </p>
+                        <p className="text-xs text-blue-200 flex items-center gap-1"><ShieldCheck size={12}/> Verified Trade</p>
                     </div>
-                    <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-full transition"><X size={20} /></button>
+                    <button onClick={onClose}><X size={20} /></button>
                 </div>
 
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
                     {messages.map((msg) => (
                         <div key={msg._id} className={`flex ${msg.sender === (isSellerView ? 'seller' : 'user') ? 'justify-end' : 'justify-start'}`}>
                             {msg.type === 'OFFER' || msg.type === 'PAYMENT_LINK' ? (
-                                <div className={`w-4/5 border rounded-xl p-4 shadow-sm ${msg.sender === 'user' ? 'bg-blue-50 border-blue-200' : 'bg-white border-green-200'}`}>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
-                                            {msg.sender === 'user' ? 'Buyer Proposal' : 'Seller Offer'}
-                                        </span>
-                                        <span className="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded-full font-bold">
-                                            ₹{msg.offerAmount}
-                                        </span>
-                                    </div>
-                                    <p className="text-sm text-gray-800 mb-3 whitespace-pre-wrap">{msg.message}</p>
-
-                                    {/* SELLER'S VIEW: Accept Buyer Proposal */}
+                                <div className="w-4/5 border rounded-xl p-3 bg-white shadow-sm border-l-4 border-l-yellow-400">
+                                    <p className="text-xs font-bold text-gray-500 uppercase mb-1">
+                                        {msg.sender === 'user' ? 'Buyer Proposal' : 'Seller Offer'}
+                                    </p>
+                                    <p className="font-bold text-lg">₹{msg.offerAmount}</p>
+                                    <p className="text-xs text-gray-600 mb-2">{msg.message}</p>
+                                    
+                                    {/* Action Buttons inside Bubble */}
+                                    {!isSellerView && msg.sender === 'seller' && msg.offerStatus === 'PENDING' && (
+                                        <button onClick={() => handlePay(msg._id)} className="w-full bg-green-600 text-white text-xs font-bold py-1.5 rounded">Approve & Pay</button>
+                                    )}
                                     {isSellerView && msg.sender === 'user' && msg.offerStatus === 'PENDING' && (
-                                        <button
-                                            onClick={() => handleSellerAccept(msg._id)}
-                                            disabled={!!processingId}
-                                            className="w-full bg-green-600 hover:bg-green-700 text-white text-sm font-bold py-2 rounded-lg flex items-center justify-center shadow-sm disabled:opacity-50"
-                                        >
-                                            {processingId === msg._id ? <Loader2 className="animate-spin" size={16} /> : "🤝 Accept Proposal & Finalize Offer"}
-                                        </button>
+                                        <button onClick={() => handleAcceptProposal(msg._id)} className="w-full bg-blue-600 text-white text-xs font-bold py-1.5 rounded">Accept Proposal</button>
                                     )}
-
-                                    {/* BUYER'S VIEW: Approve & Pay */}
-                                    {!isSellerView && msg.sender === 'seller' && msg.offerStatus === 'PENDING' && msg.type === 'OFFER' && (
-                                        <button
-                                            onClick={() => handleApprovePay(msg._id)}
-                                            disabled={!!processingId}
-                                            className="w-full bg-red-600 hover:bg-red-700 text-white text-sm font-bold py-2 rounded-lg flex items-center justify-center shadow-sm disabled:opacity-50"
-                                        >
-                                            {processingId === msg._id ? <Loader2 className="animate-spin" size={16} /> : "✅ Approve Deal & Pay via Razorpay"}
-                                        </button>
-                                    )}
-
-                                    {/* PAYMENT LINK */}
                                     {msg.type === 'PAYMENT_LINK' && msg.paymentLink && (
-                                        <a
-                                            href={msg.paymentLink}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="block w-full bg-green-600 text-white text-center font-bold py-2 rounded-lg hover:bg-green-700 transition-colors mt-2"
-                                        >
-                                            💳 Proceed to Secure Payment (Escrow)
-                                        </a>
+                                        <a href={msg.paymentLink} target="_blank" className="block text-center bg-green-600 text-white text-xs font-bold py-1.5 rounded">Pay Now</a>
                                     )}
-
-                                    {/* Waiting Status */}
-                                    {msg.offerStatus === 'PENDING' && (
-                                        <p className="text-[10px] text-center text-gray-500 italic mt-2">
-                                            {msg.sender === 'user' && isSellerView ? 'Awaiting your acceptance...' : ''}
-                                            {msg.sender === 'user' && !isSellerView ? 'Awaiting seller acceptance...' : ''}
-                                            {msg.sender === 'seller' && isSellerView ? 'Awaiting buyer approval and payment...' : ''}
-                                            {msg.sender === 'seller' && !isSellerView ? 'Awaiting your payment...' : ''}
-                                        </p>
-                                    )}
-
                                 </div>
                             ) : (
-                                <div className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm shadow-sm ${msg.sender === (isSellerView ? 'seller' : 'user') ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white border border-gray-100 text-gray-800 rounded-bl-none'}`}>
+                                <div className={`px-4 py-2 rounded-2xl text-sm shadow-sm max-w-[80%] ${msg.sender === (isSellerView ? 'seller' : 'user') ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 rounded-bl-none'}`}>
                                     {msg.message}
                                 </div>
                             )}
@@ -226,145 +145,29 @@ const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, sellerName, sell
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* Deal Creator Inputs */}
-                {showDealInput && (
-                    <div className="p-4 bg-white border-t border-gray-200 shadow-up z-10">
-                        <div className="flex justify-between items-center mb-3">
-                            <p className="text-xs font-bold text-gray-500 uppercase">
-                                {isSellerView ? "Create Official Offer" : "Propose a Price"}
-                            </p>
-                            <button onClick={() => setShowDealInput(false)}><X size={16} className="text-gray-400 hover:text-gray-600" /></button>
-                        </div>
-                        <div className="space-y-3">
-                            <input
-                                type="text"
-                                placeholder="Description (e.g. 500kg Rice Grade A)"
-                                value={dealDesc}
-                                onChange={(e) => setDealDesc(e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500 text-black"
-                            />
-                            <div className="flex gap-3">
-                                <div className="relative w-1/2">
-                                    <span className="absolute left-3 top-2 text-gray-500">₹</span>
-                                    <input
-                                        type="number"
-                                        placeholder="Amount"
-                                        value={dealAmount}
-                                        onChange={(e) => setDealAmount(e.target.value)}
-                                        className="w-full border border-gray-300 rounded-lg pl-6 pr-3 py-2 text-sm outline-none focus:border-blue-500 text-black"
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleCreateProposal}
-                                    className="flex-1 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors"
-                                >
-                                    Send
-                                </button>
-                            </div>
-                        </div>
+                {/* Input Area */}
+                {showInput && (
+                    <div className="p-3 bg-gray-100 border-t flex gap-2 animate-in slide-in-from-bottom-2">
+                        <input type="number" placeholder="Enter Amount" value={amount} onChange={e => setAmount(e.target.value)} className="flex-1 px-3 py-2 border rounded text-sm outline-none" autoFocus />
+                        <button onClick={handleDealAction} className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold">Send</button>
+                        <button onClick={() => setShowInput(false)}><X size={20} className="text-gray-500 mt-2"/></button>
                     </div>
                 )}
 
-                {/* Quick Offer Input */}
-                {showQuickOffer && !isSellerView && (
-                    <div className="p-4 bg-green-50 border-t border-green-200">
-                        <div className="flex justify-between items-center mb-3">
-                            <p className="text-xs font-bold text-gray-700 uppercase">Enter Your Offer</p>
-                            <button onClick={() => setShowQuickOffer(false)}><X size={16} className="text-gray-400 hover:text-gray-600" /></button>
-                        </div>
-                        <div className="flex gap-2">
-                            <div className="relative flex-1">
-                                <span className="absolute left-3 top-2.5 text-gray-500 font-semibold">₹</span>
-                                <input
-                                    type="number"
-                                    placeholder="Enter amount"
-                                    value={quickOfferAmount}
-                                    onChange={(e) => setQuickOfferAmount(e.target.value)}
-                                    className="w-full border border-gray-300 rounded-lg pl-7 pr-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none text-black"
-                                    autoFocus
-                                />
-                            </div>
-                            <button
-                                onClick={async () => {
-                                    if (!quickOfferAmount || isNaN(Number(quickOfferAmount))) {
-                                        alert("Please enter a valid amount");
-                                        return;
-                                    }
-
-                                    // Step 1: Create the offer
-                                    const offerRes = await fetch('/api/chat/offer/create', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            sellerId,
-                                            amount: Number(quickOfferAmount),
-                                            description: `Buyer's offer: ₹${quickOfferAmount}`,
-                                            sender: 'user'
-                                        })
-                                    });
-
-                                    if (!offerRes.ok) {
-                                        const data = await offerRes.json();
-                                        alert(data.error || "Failed to create offer");
-                                        return;
-                                    }
-
-                                    const offerData = await offerRes.json();
-                                    const messageId = offerData.data._id;
-
-                                    // Step 2: Immediately generate payment link
-                                    const paymentRes = await fetch('/api/chat/offer/approve', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ messageId, sellerId })
-                                    });
-
-                                    setQuickOfferAmount("");
-                                    setShowQuickOffer(false);
-                                    fetchHistory();
-
-                                    if (paymentRes.ok) {
-                                        const paymentData = await paymentRes.json();
-                                        if (paymentData.link) {
-                                            setTimeout(() => {
-                                                alert("Payment link generated! Check the chat.");
-                                            }, 500);
-                                        }
-                                    }
-                                }}
-                                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg text-sm font-bold transition-colors whitespace-nowrap"
-                            >
-                                Send Offer
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {/* Chat Input Bar */}
-                <div className="p-3 bg-gray-50 border-t border-gray-200 flex gap-2 items-center flex-shrink-0">
-                    {!isSellerView && (
-                        <button
-                            onClick={() => setShowQuickOffer(!showQuickOffer)}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap shadow-sm"
-                            title="Make an offer to the seller"
-                        >
-                            {showQuickOffer ? 'Cancel' : 'Approve & Pay'}
-                        </button>
-                    )}
-                    <input
-                        type="text"
-                        placeholder="Type message..."
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                        className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-black"
-                    />
-                    <button
-                        onClick={handleSend}
-                        className="bg-blue-600 text-white p-2 rounded-full shadow-sm hover:bg-blue-700 transition-colors"
+                <div className="p-3 bg-white border-t flex items-center gap-2 shrink-0">
+                    <button 
+                        onClick={() => setShowInput(!showInput)}
+                        className={`px-3 py-2 rounded-full text-xs font-bold border shadow-sm whitespace-nowrap ${isSellerView ? 'border-blue-200 text-blue-700' : 'border-green-200 text-green-700'}`}
                     >
-                        <SendHorizontal size={20} />
+                        {isSellerView ? 'Accept Deal' : 'Approve & Pay'}
                     </button>
+                    <input 
+                        type="text" placeholder="Type message..." 
+                        value={newMessage} onChange={e => setNewMessage(e.target.value)} 
+                        onKeyPress={e => e.key === 'Enter' && handleSend()}
+                        className="flex-1 border rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button onClick={handleSend} className="p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700"><SendHorizontal size={18}/></button>
                 </div>
             </div>
         </div>

@@ -4,7 +4,6 @@ import Chat from "@/lib/models/Chat";
 import Seller from "@/lib/models/Seller";
 import User from "@/lib/models/User";
 
-// Admin Config
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
 const ADMIN_PHONE = '8448695809';
 
@@ -21,48 +20,46 @@ export async function POST(req: Request) {
         await dbConnect();
         const { messageId } = await req.json();
 
-        // 1. Find the Buyer's Proposal
+        // 1. Find & Update
         const originalMsg = await Chat.findById(messageId);
-        if (!originalMsg || originalMsg.sender !== 'user') {
-            return NextResponse.json({ success: false, error: "Invalid proposal" });
-        }
+        if (!originalMsg) return NextResponse.json({ success: false });
 
-        // 2. Mark Original as Accepted
         originalMsg.offerStatus = 'ACCEPTED';
         await originalMsg.save();
 
-        // 3. Create a New "Confirmed Deal" Offer from Seller
-        const confirmedMsg = await Chat.create({
+        // 2. Create Confirmation Message
+        await Chat.create({
             sellerId: originalMsg.sellerId,
             userId: originalMsg.userId,
-            sender: 'seller', // Now it's a Seller-endorsed offer
-            message: `✅ **PROPOSAL ACCEPTED**\n\nThe seller accepted your price.\n\n📦 ${originalMsg.message.split('\n')[1] || 'Deal'}\n💰 Final Price: ₹${originalMsg.offerAmount}`,
+            sender: 'seller',
+            message: `✅ **OFFER ACCEPTED**\n\nSeller agreed to ₹${originalMsg.offerAmount}.\nBuyer can now pay.`,
             type: 'OFFER',
             offerAmount: originalMsg.offerAmount,
-            offerStatus: 'PENDING' // Pending Buyer Payment
+            offerStatus: 'PENDING' // Pending Payment
         });
 
-        // 4. 👮 ADMIN MONITORING
+        // 3. Fetch Info
         const seller = await Seller.findById(originalMsg.sellerId).select('name phone');
         const buyer = await User.findById(originalMsg.userId).select('name phone');
 
-        const adminMsg = `🤝 *MONITOR: DEAL AGREED*
+        // 👮 ADMIN NOTIFICATION - ACCEPTED DEAL
+        const adminMsg = `🤝 *MONITOR: DEAL ACCEPTED*
 
-The Seller has ACCEPTED a Buyer's proposal.
+✅ Seller Accepted Buyer's Price!
 
-💰 *Agreed Price:* ₹${originalMsg.offerAmount}
+💰 *Agreed Amount:* ₹${originalMsg.offerAmount}
 
-🏪 *Seller:* ${seller?.name || 'Unknown'} (${seller?.phone})
-👤 *Buyer:* ${buyer?.name || 'Unknown'} (${buyer?.phone})
+Parties:
+🏪 Seller: ${seller?.name} (${seller?.phone})
+👤 Buyer: ${buyer?.name} (${buyer?.phone})
 
-⏳ *Next Step:* Waiting for Buyer to Pay.`;
+🚀 *Status:* Waiting for Payment via Razorpay.`;
 
-        notifyAdmin(adminMsg);
+        await notifyAdmin(adminMsg);
 
-        return NextResponse.json({ success: true, data: confirmedMsg });
+        return NextResponse.json({ success: true });
 
     } catch (error) {
-        console.error("Accept Proposal Error:", error);
-        return NextResponse.json({ success: false, error: "Server Error" });
+        return NextResponse.json({ success: false });
     }
 }

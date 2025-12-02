@@ -10,7 +10,7 @@ import Razorpay from "razorpay";
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
 const ADMIN_PHONE = '8448695809'; 
 
-// Notifications
+// Notifications Helper
 async function sendNotification(phone: string, message: string) {
     await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
         method: 'POST',
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
         if (!seller) return NextResponse.json({ success: false, error: "Seller not found" });
 
-        // 2. Financial Calculations
+        // 2. Financial Calculations (5% Commission)
         const amount = offerMsg.offerAmount!; 
         const commission = Math.round(amount * 0.05); 
         const sellerShare = amount - commission;
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
             deliveryStatus: 'PENDING'
         });
 
-        // 4. Generate Razorpay Link
+        // 4. Generate Razorpay Link for Buyer
         const paymentLinkRequest = {
             amount: amount * 100, 
             currency: "INR",
@@ -69,9 +69,9 @@ export async function POST(req: Request) {
             reference_id: internalOrderId,
             description: `Payment for Order #${internalOrderId}`,
             customer: {
-                name: "Verified Buyer",
-                contact: "+919999999999", 
-                email: "buyer@example.com"
+                name: buyerName,
+                contact: buyer?.phone || "+919999999999", 
+                email: buyer?.email || "buyer@example.com"
             },
             notify: { sms: true, email: true },
             callback_url: `${process.env.NEXT_PUBLIC_WEBSITE_URL}/buyer/orders`,
@@ -87,23 +87,30 @@ export async function POST(req: Request) {
         offerMsg.paymentLink = response.short_url;
         await offerMsg.save();
 
-        // 6. NOTIFICATIONS
-        // To Seller
-        const sellerMsg = `🎉 *Payment Initiated!*\nOrder #${internalOrderId} - Value: ₹${amount}.\nThe buyer has approved the deal and is paying via Escrow.\n\n💵 *Your Net Payout (95%):* ₹${sellerShare}\n🚀 Prepare to ship once payment is confirmed.`;
+        // 6. NOTIFICATIONS & BANK LINK FOR SELLER
+        
+        // Prepare Bank Details Link
+        const bankDetailsLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/add-bank-details?orderId=${internalOrderId}`;
+
+        // Message to Seller
+        const sellerMsg = `🎉 *Deal Finalized!*\nOrder #${internalOrderId} - Value: ₹${amount}.\n\n💵 *Your Net Payout (95%):* ₹${sellerShare}\n\n⚠️ *IMPORTANT:* Please ensure your bank details are added so we can transfer funds immediately after delivery.\n\n👇 *Add Bank Details:* \n${bankDetailsLink}`;
+        
         sendNotification(seller.phone, sellerMsg);
 
-        // To Admin (MONITOR)
+        // Message to Admin
         const adminMsg = `💰 *MONITOR: PAYMENT STARTED*
 
 ✅ Buyer Approved & Clicked Pay.
+✅ Seller sent Bank Details Link.
 
 📊 *Deal Details:*
 • Buyer: ${buyerName}
 • Seller: ${seller.name}
 • Amount: ₹${amount}
+• Net Payout: ₹${sellerShare}
 • Order ID: ${internalOrderId}
 
-🚀 Status: Redirecting Buyer to Razorpay.
+🚀 Status: Waiting for Payment.
 👮 Admin Mobile: ${ADMIN_PHONE}`;
 
         sendNotification(ADMIN_PHONE, adminMsg);

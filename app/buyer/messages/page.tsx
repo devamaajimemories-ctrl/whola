@@ -4,12 +4,11 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
     Send, ArrowLeft, MoreVertical, Phone, Search,
-    ShieldCheck, Loader2, MessageSquare, User, Paperclip, Smile, Check
+    ShieldCheck, Loader2, MessageSquare, User, Paperclip, Smile, Check, X, CheckCircle
 } from 'lucide-react';
 
-// Types
 interface Conversation {
-    _id: string; // This is the Seller ID
+    _id: string; 
     lastMessage: string;
     lastDate: string;
     seller: {
@@ -24,6 +23,9 @@ interface Message {
     message: string;
     createdAt: string;
     type?: 'TEXT' | 'OFFER' | 'PAYMENT_LINK';
+    offerAmount?: number;
+    offerStatus?: 'PENDING' | 'ACCEPTED';
+    paymentLink?: string;
 }
 
 function BuyerChatInterface() {
@@ -35,7 +37,6 @@ function BuyerChatInterface() {
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeSellerId, setActiveSellerId] = useState<string | null>(initialSellerId);
     
-    // Store Seller Name logic
     const [activeName, setActiveName] = useState<string>(paramSellerName || "Supplier");
     const [isVerified, setIsVerified] = useState<boolean>(false);
 
@@ -43,9 +44,16 @@ function BuyerChatInterface() {
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
+    
+    // Deal & Order State
+    const [showDealInput, setShowDealInput] = useState(false);
+    const [dealAmount, setDealAmount] = useState("");
+    const [activeOrder, setActiveOrder] = useState<any>(null); // Stores current active order
+    const [completingTask, setCompletingTask] = useState(false);
+    
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    // 1. Fetch Conversation List
+    // Fetch Chats List
     const fetchConversations = async () => {
         try {
             const res = await fetch('/api/chat/conversations');
@@ -55,7 +63,7 @@ function BuyerChatInterface() {
         finally { setLoading(false); }
     };
 
-    // 2. Fetch Messages for Active Chat
+    // Fetch Messages
     const fetchMessages = async (sellerId: string) => {
         try {
             const res = await fetch(`/api/chat/history?sellerId=${sellerId}`);
@@ -64,13 +72,25 @@ function BuyerChatInterface() {
         } catch (e) { console.error(e); }
     };
 
+    // Check for Active Order (To show "Task Completed" button)
+    const checkActiveOrder = async (sellerId: string) => {
+        try {
+            const res = await fetch(`/api/orders/check-active?sellerId=${sellerId}`);
+            const data = await res.json();
+            if (data.success && data.activeOrder) {
+                setActiveOrder(data.activeOrder);
+            } else {
+                setActiveOrder(null);
+            }
+        } catch (e) { console.error("Order check failed", e); }
+    };
+
     useEffect(() => {
         fetchConversations();
         const interval = setInterval(fetchConversations, 10000);
         return () => clearInterval(interval);
     }, []);
 
-    // Update Seller Name when switching chats or list loads
     useEffect(() => {
         if (activeSellerId) {
             const conv = conversations.find(c => c._id === activeSellerId);
@@ -79,7 +99,12 @@ function BuyerChatInterface() {
                 setIsVerified(conv.seller.isVerified);
             }
             fetchMessages(activeSellerId);
-            const interval = setInterval(() => fetchMessages(activeSellerId), 3000);
+            checkActiveOrder(activeSellerId); // Check order status
+
+            const interval = setInterval(() => {
+                fetchMessages(activeSellerId);
+                checkActiveOrder(activeSellerId); // Poll order status
+            }, 3000);
             return () => clearInterval(interval);
         }
     }, [activeSellerId, conversations]);
@@ -99,9 +124,76 @@ function BuyerChatInterface() {
             });
             setInput("");
             fetchMessages(activeSellerId);
-            fetchConversations(); // Refresh list to update snippet
+            fetchConversations();
         } catch (e) { alert("Failed to send"); }
         finally { setSending(false); }
+    };
+
+    // PROPOSE DEAL
+    const handleProposeDeal = async () => {
+        if (!dealAmount || isNaN(Number(dealAmount))) {
+            alert("Please enter a valid amount");
+            return;
+        }
+        try {
+            await fetch('/api/chat/offer/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    sellerId: activeSellerId, 
+                    amount: Number(dealAmount),
+                    description: `Buyer proposed price: ₹${dealAmount}`,
+                    sender: 'user' 
+                })
+            });
+            setDealAmount("");
+            setShowDealInput(false);
+            if (activeSellerId) fetchMessages(activeSellerId);
+        } catch (e) { alert("Failed to send proposal"); }
+    };
+
+    // PAY (Generates Link & Notifies Seller)
+    const handlePay = async (messageId: string) => {
+        if(!confirm("Approve this deal and proceed to payment?")) return;
+        try {
+            const res = await fetch('/api/chat/offer/approve', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ messageId, sellerId: activeSellerId })
+            });
+            const data = await res.json();
+            if (data.success && data.link) {
+                window.open(data.link, '_blank');
+            } else {
+                alert("Error generating payment link");
+            }
+        } catch (e) { alert("Payment error"); }
+    };
+
+    // MARK TASK COMPLETED (Triggers Payout)
+    const handleTaskCompleted = async () => {
+        if(!activeOrder) return;
+        if(!confirm(`Confirm that you received the order (${activeOrder.orderId})? This will release payment to the seller.`)) return;
+
+        setCompletingTask(true);
+        try {
+            const res = await fetch('/api/orders/confirm-delivery', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: activeOrder.orderId })
+            });
+            const data = await res.json();
+            if(data.success) {
+                alert("Success! Order marked as complete and payment released to seller.");
+                setActiveOrder(null); // Hide button
+            } else {
+                alert(data.error || "Failed to confirm.");
+            }
+        } catch(e) {
+            alert("Network error.");
+        } finally {
+            setCompletingTask(false);
+        }
     };
 
     const handleBack = () => {
@@ -111,136 +203,118 @@ function BuyerChatInterface() {
 
     return (
         <div className="flex h-[calc(100vh-64px)] bg-[#d1d7db] overflow-hidden font-sans">
-            
-            {/* === SIDEBAR (List of Sellers) === */}
-            <aside className={`
-                w-full md:w-[350px] lg:w-[400px] bg-white border-r border-[#d1d7db] flex flex-col z-20
-                ${activeSellerId ? 'hidden md:flex' : 'flex'}
-            `}>
-                <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between border-b border-[#d1d7db]">
-                    <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center">
-                            <User size={20} className="text-gray-500" />
-                        </div>
-                        <span className="font-bold text-gray-700">Suppliers</span>
-                    </div>
-                    <div className="flex gap-4 text-[#54656f]">
-                        <MessageSquare size={20} />
-                        <MoreVertical size={20} />
-                    </div>
+            {/* Sidebar */}
+            <aside className={`w-full md:w-[350px] lg:w-[400px] bg-white border-r border-[#d1d7db] flex flex-col z-20 ${activeSellerId ? 'hidden md:flex' : 'flex'}`}>
+                <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center gap-2 border-b border-[#d1d7db]">
+                    <User size={20} className="text-gray-500" />
+                    <span className="font-bold text-gray-700">Suppliers</span>
                 </div>
-
-                <div className="p-2 bg-white border-b border-[#f0f2f5]">
-                    <div className="bg-[#f0f2f5] rounded-lg flex items-center px-3 py-1.5 h-[35px]">
-                        <Search size={18} className="text-[#54656f] mr-4" />
-                        <input placeholder="Search suppliers..." className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder-[#54656f] text-black" />
-                    </div>
-                </div>
-
                 <div className="flex-1 overflow-y-auto bg-white">
-                    {loading ? (
-                        <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-[#00a884]" /></div>
-                    ) : conversations.length === 0 ? (
-                        <div className="p-8 text-center text-gray-500 text-sm">No chats found. Start by searching for products.</div>
-                    ) : (
+                    {loading ? <div className="p-8 flex justify-center"><Loader2 className="animate-spin" /></div> : 
                         conversations.map((conv) => (
-                            <div
-                                key={conv._id}
-                                onClick={() => setActiveSellerId(conv._id)}
-                                className={`flex items-center gap-3 p-3 cursor-pointer border-b border-[#f0f2f5] hover:bg-[#f5f6f6] ${activeSellerId === conv._id ? 'bg-[#f0f2f5]' : ''}`}
-                            >
-                                <div className="w-12 h-12 rounded-full bg-[#dfe5e7] flex items-center justify-center text-gray-600 text-lg font-medium shrink-0">
-                                    {conv.seller.name.charAt(0).toUpperCase()}
-                                </div>
+                            <div key={conv._id} onClick={() => setActiveSellerId(conv._id)} className={`flex items-center gap-3 p-3 cursor-pointer border-b hover:bg-[#f5f6f6] ${activeSellerId === conv._id ? 'bg-[#f0f2f5]' : ''}`}>
+                                <div className="w-12 h-12 rounded-full bg-[#dfe5e7] flex items-center justify-center font-bold text-gray-600">{conv.seller.name.charAt(0)}</div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex justify-between items-baseline">
-                                        <h3 className="text-[#111b21] font-normal text-[17px] truncate capitalize flex items-center gap-1">
-                                            {conv.seller.name}
-                                            {conv.seller.isVerified && <ShieldCheck size={14} className="text-[#00a884]" />}
-                                        </h3>
-                                        <span className="text-xs text-[#667781]">{new Date(conv.lastDate).toLocaleDateString()}</span>
-                                    </div>
-                                    <p className="text-sm text-[#667781] truncate">{conv.lastMessage}</p>
+                                    <h3 className="font-medium truncate">{conv.seller.name}</h3>
+                                    <p className="text-sm text-gray-500 truncate">{conv.lastMessage}</p>
                                 </div>
                             </div>
                         ))
-                    )}
+                    }
                 </div>
             </aside>
 
-            {/* === MAIN CHAT AREA === */}
-            <main className={`
-                flex-1 flex flex-col relative bg-[#efeae2]
-                ${!activeSellerId ? 'hidden md:flex' : 'flex'}
-            `}>
+            {/* Main Chat */}
+            <main className={`flex-1 flex flex-col relative bg-[#efeae2] ${!activeSellerId ? 'hidden md:flex' : 'flex'}`}>
                 {activeSellerId ? (
                     <>
-                        <header className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between border-b border-[#d1d7db] z-10">
+                        <header className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between border-b z-10">
                             <div className="flex items-center gap-3">
-                                <button onClick={handleBack} className="md:hidden text-[#54656f]"><ArrowLeft size={24} /></button>
-                                <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center text-gray-600 font-bold">
-                                    {activeName.charAt(0).toUpperCase()}
-                                </div>
-                                <div>
-                                    <h2 className="text-[#111b21] font-medium text-[16px] flex items-center gap-1">
-                                        {activeName}
-                                        {isVerified && <ShieldCheck size={14} className="text-[#00a884]" />}
-                                    </h2>
-                                    <p className="text-xs text-[#667781]">Business Account</p>
-                                </div>
-                            </div>
-                            <div className="flex gap-5 text-[#54656f]">
-                                <Search size={20} />
-                                <MoreVertical size={20} />
+                                <button onClick={handleBack} className="md:hidden"><ArrowLeft size={24}/></button>
+                                <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center font-bold text-gray-600">{activeName.charAt(0)}</div>
+                                <div><h2 className="font-medium">{activeName}</h2><p className="text-xs text-gray-500">Business Account</p></div>
                             </div>
                         </header>
 
-                        <div 
-                            className="flex-1 overflow-y-auto p-4 md:px-16 lg:px-24" 
-                            ref={scrollRef}
-                            style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')", backgroundBlendMode: 'overlay' }}
-                        >
+                        <div className="flex-1 overflow-y-auto p-4 md:px-16" ref={scrollRef} style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')", backgroundBlendMode: 'overlay' }}>
                             {messages.map((msg) => (
                                 <div key={msg._id} className={`flex mb-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`
-                                        relative max-w-[85%] md:max-w-[65%] rounded-lg px-3 py-1.5 shadow-sm text-[14.2px] leading-[19px] break-words
-                                        ${msg.sender === 'user' ? 'bg-[#d9fdd3] text-black rounded-tr-none' : 'bg-white text-black rounded-tl-none'}
-                                    `}>
-                                         {msg.type === 'OFFER' && <div className="text-xs font-bold text-orange-600 mb-1">SPECIAL OFFER</div>}
-                                         {msg.type === 'PAYMENT_LINK' && <div className="text-xs font-bold text-blue-600 mb-1">INVOICE</div>}
-                                         
-                                        <div>{msg.message}</div>
+                                    <div className={`relative max-w-[85%] rounded-lg px-3 py-2 shadow-sm text-sm ${msg.sender === 'user' ? 'bg-[#d9fdd3]' : 'bg-white'}`}>
                                         
-                                        <div className="text-[11px] text-[#667781] text-right mt-1 flex justify-end items-center gap-1">
-                                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            {msg.sender === 'user' && <Check size={14} className="text-[#53bdeb]" />}
-                                        </div>
+                                        {msg.type === 'OFFER' && (
+                                            <div className="mb-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
+                                                <p className="font-bold text-yellow-800 text-xs uppercase mb-1">{msg.sender === 'user' ? 'You Proposed' : 'Seller Offer'}</p>
+                                                <p className="text-lg font-bold">₹{msg.offerAmount}</p>
+                                                {msg.sender === 'seller' && msg.offerStatus === 'PENDING' && (
+                                                    <button onClick={() => handlePay(msg._id)} className="mt-2 w-full bg-green-600 text-white py-1 rounded text-xs font-bold">Accept & Pay</button>
+                                                )}
+                                            </div>
+                                        )}
+                                        
+                                        {msg.type === 'PAYMENT_LINK' && (
+                                            <div className="mb-2 p-2 bg-green-50 border border-green-200 rounded">
+                                                <p className="font-bold text-green-800 text-xs mb-1">PAYMENT LINK READY</p>
+                                                <a href={msg.paymentLink} target="_blank" className="block w-full bg-green-600 text-white text-center py-1 rounded text-xs font-bold">Pay ₹{msg.offerAmount}</a>
+                                            </div>
+                                        )}
+
+                                        <div>{msg.message}</div>
+                                        <div className="text-[10px] text-gray-500 text-right mt-1">{new Date(msg.createdAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        <footer className="bg-[#f0f2f5] min-h-[62px] px-4 py-2 flex items-center gap-3 z-10">
-                            <div className="flex gap-4 text-[#54656f]"><Smile size={24} /><Paperclip size={24} /></div>
-                            <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2">
-                                <input
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                                    placeholder="Type a message"
-                                    className="w-full bg-transparent border-none focus:ring-0 text-[15px] text-black p-0 placeholder-[#54656f]"
-                                />
+                        {/* === ACTION AREA: APPROVE & PAY or MARK COMPLETED === */}
+                        
+                        {showDealInput && (
+                            <div className="p-3 bg-white border-t border-gray-200 animate-in slide-in-from-bottom-2">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-xs font-bold text-gray-500">APPROVE AMOUNT</span>
+                                    <button onClick={() => setShowDealInput(false)}><X size={16} className="text-gray-400"/></button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="number" 
+                                        placeholder="Enter Amount (₹)" 
+                                        className="flex-1 border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none"
+                                        value={dealAmount}
+                                        onChange={(e) => setDealAmount(e.target.value)}
+                                    />
+                                    <button onClick={handleProposeDeal} className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700">Send</button>
+                                </div>
                             </div>
-                            <button onClick={handleSend} disabled={!input.trim() || sending} className="text-[#54656f] hover:text-[#00a884] transition-colors">
-                                {sending ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}
-                            </button>
+                        )}
+
+                        <footer className="bg-[#f0f2f5] min-h-[62px] px-4 py-2 flex items-center gap-3 z-10">
+                            
+                            {/* DYNAMIC BUTTON: Switches based on order status */}
+                            {activeOrder ? (
+                                <button 
+                                    onClick={handleTaskCompleted}
+                                    disabled={completingTask}
+                                    className="bg-green-600 border border-green-700 text-white px-3 py-2 rounded-full text-xs font-bold hover:bg-green-700 shadow-sm whitespace-nowrap flex items-center gap-1 animate-pulse"
+                                >
+                                    {completingTask ? <Loader2 size={14} className="animate-spin"/> : <CheckCircle size={14} />} 
+                                    Task Completed
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={() => setShowDealInput(!showDealInput)}
+                                    className="bg-white border border-gray-300 text-green-700 px-3 py-2 rounded-full text-xs font-bold hover:bg-green-50 shadow-sm whitespace-nowrap"
+                                >
+                                    Approve & Pay
+                                </button>
+                            )}
+
+                            <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2">
+                                <input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message" className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-0" />
+                            </div>
+                            <button onClick={handleSend} disabled={!input.trim()} className="text-[#54656f]"><Send size={24} /></button>
                         </footer>
                     </>
                 ) : (
-                    <div className="hidden md:flex flex-col items-center justify-center h-full border-b-[6px] border-[#25d366] bg-[#f0f2f5]">
-                        <h2 className="text-[#41525d] text-[32px] font-light mt-8">WholesaleMart Chat</h2>
-                        <p className="text-[#667781] text-sm mt-4">Securely negotiate with suppliers without sharing personal details.</p>
-                    </div>
+                    <div className="hidden md:flex flex-col items-center justify-center h-full text-gray-500">Select a chat</div>
                 )}
             </main>
         </div>
