@@ -12,7 +12,10 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/buyer') ||
         request.nextUrl.pathname.startsWith('/api/seller') ||
         request.nextUrl.pathname.startsWith('/api/buyer') ||
-        request.nextUrl.pathname.startsWith('/api/products/add');
+        request.nextUrl.pathname.startsWith('/api/products') ||
+        request.nextUrl.pathname.startsWith('/api/chat') ||
+        request.nextUrl.pathname.startsWith('/api/requirements') || // <--- ADDED: Protect this route
+        request.nextUrl.pathname.startsWith('/admin');
 
     // 3. Redirect to Login if no token on protected routes
     if (isProtectedRoute && !token) {
@@ -58,7 +61,8 @@ export const config = {
         '/api/seller/:path*',
         '/api/buyer/:path*',
         '/api/products/:path*',
-        '/api/chat/:path*', // <--- ADDED: Ensures chat APIs get the x-user-id header
+        '/api/chat/:path*', 
+        '/api/requirements/:path*', // <--- ADDED to Matcher
         '/admin/:path*',
     ],
 };

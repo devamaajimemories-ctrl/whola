@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { X, Send, Loader2, Search, MapPin, Crosshair } from "lucide-react";
+import { X, Send, Loader2, Search, MapPin, Crosshair, Lock } from "lucide-react";
 import { industrialProducts } from "@/lib/industrialData";
+import Link from "next/link";
 
 interface PostRequirementModalProps {
     isOpen: boolean;
@@ -27,6 +28,39 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
     const [suggestions, setSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const suggestionsRef = useRef<HTMLDivElement>(null);
+
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [checkingAuth, setCheckingAuth] = useState(true);
+
+    // Check Auth on Mount
+    useEffect(() => {
+        if (isOpen) {
+            checkAuth();
+        }
+    }, [isOpen]);
+
+    const checkAuth = async () => {
+        setCheckingAuth(true);
+        try {
+            const res = await fetch("/api/auth/me");
+            const data = await res.json();
+            if (data.success && data.user) {
+                setIsAuthenticated(true);
+                setFormData(prev => ({
+                    ...prev,
+                    buyerName: data.user.name || "",
+                    buyerPhone: data.user.phone || ""
+                }));
+            } else {
+                setIsAuthenticated(false);
+            }
+        } catch (error) {
+            console.error("Auth check failed", error);
+            setIsAuthenticated(false);
+        } finally {
+            setCheckingAuth(false);
+        }
+    };
 
     const allProducts = React.useMemo(() => {
         return industrialProducts.flatMap(cat => cat.products);
@@ -143,6 +177,19 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                             <h3 className="text-xl font-bold text-gray-800 mb-2">Requirement Posted!</h3>
                             <p className="text-gray-600">We are contacting sellers in <b>{formData.city || 'your area'}</b> and will update you shortly.</p>
                         </div>
+                    ) : !isAuthenticated && !checkingAuth ? (
+                        <div className="text-center py-8 space-y-4">
+                            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Lock size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800">Login Required</h3>
+                            <p className="text-gray-600 px-4">
+                                You must be logged in to post a requirement. This ensures valid inquiries for our sellers.
+                            </p>
+                            <Link href="/login" className="inline-block bg-red-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-700 transition-colors">
+                                Login Now
+                            </Link>
+                        </div>
                     ) : (
                         <form onSubmit={handleSubmit} className="space-y-4">
                             {/* Product Input */}
@@ -253,11 +300,25 @@ const PostRequirementModal: React.FC<PostRequirementModalProps> = ({ isOpen, onC
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Your Name <span className="text-red-500">*</span></label>
-                                    <input type="text" name="buyerName" required value={formData.buyerName} onChange={handleChange} placeholder="John Doe" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" />
+                                    <input
+                                        type="text"
+                                        name="buyerName"
+                                        required
+                                        value={formData.buyerName}
+                                        readOnly
+                                        className="w-full px-4 py-2 border border-gray-300 bg-gray-100 text-gray-500 rounded-lg focus:outline-none cursor-not-allowed"
+                                    />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number <span className="text-red-500">*</span></label>
-                                    <input type="tel" name="buyerPhone" required value={formData.buyerPhone} onChange={handleChange} placeholder="+91..." className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none" />
+                                    <input
+                                        type="tel"
+                                        name="buyerPhone"
+                                        required
+                                        value={formData.buyerPhone}
+                                        readOnly
+                                        className="w-full px-4 py-2 border border-gray-300 bg-gray-100 text-gray-500 rounded-lg focus:outline-none cursor-not-allowed"
+                                    />
                                 </div>
                             </div>
 
