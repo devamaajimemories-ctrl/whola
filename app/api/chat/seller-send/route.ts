@@ -1,123 +1,71 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
-import { checkPII } from '@/lib/utils/pii-filter';
-import dbConnect from '@/lib/db';
-import Chat from '@/lib/models/Chat';
-import User from '@/lib/models/User';
-import Seller from '@/lib/models/Seller'; // Added for admin monitoring
+import { NextResponse } from "next/server";
+import { headers } from "next/headers"; 
+import dbConnect from "@/lib/db";
+import Chat from "@/lib/models/Chat";
+import User from "@/lib/models/User";
+import Seller from "@/lib/models/Seller";
 
-// Direct external bot integration
-const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
-const ADMIN_PHONE = '8448695809';
-
-async function sendChatNotification(phone: string, message: string) {
-    await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, message })
-    }).catch(err => {
-        console.error(`❌ External Bot Failed to send chat notification to ${phone}:`, err);
-    });
-}
-
-export async function POST(request: NextRequest) {
+// POST: Seller sends a message to a Buyer
+export async function POST(req: Request) {
     try {
         await dbConnect();
-        const body = await request.json();
-        const { buyerId, message } = body;
-
-        // Get Seller ID from headers (Secure)
+        
+        // 1. Authenticate Seller (Using Headers from Middleware)
         const headersList = await headers();
-        const sellerId = headersList.get('x-user-id');
-
-        if (!sellerId) {
-            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+        const userId = headersList.get("x-user-id"); 
+        
+        if (!userId) {
+            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
 
-        if (!buyerId || !message) {
-            return NextResponse.json({ success: false, error: 'Buyer ID and message are required' }, { status: 400 });
+        const { buyerId, message, buyerName } = await req.json();
+
+        // 2. Validate Seller ID
+        // The userId from headers IS the Seller ID based on your Auth implementation
+        const isSeller = await Seller.exists({ _id: userId });
+        if (!isSeller) {
+             return NextResponse.json({ success: false, error: "Seller profile not found" }, { status: 404 });
+        }
+        const sellerId = userId;
+
+        // 3. Handle Buyer ID (Phone vs MongoID)
+        // If the buyerId is a phone number (from a lead), we find/create the User to get a valid MongoID
+        let targetUserId = buyerId;
+        const isPhone = /^\d+$/.test(buyerId); // Check if it's a phone number
+
+        if (isPhone) {
+            // It's a phone number. Find the user or create a temporary one.
+            let user = await User.findOne({ phone: buyerId });
+            
+            if (!user) {
+                // AUTO-CREATE USER so the chat works immediately
+                user = await User.create({
+                    name: buyerName || "Guest Buyer",
+                    phone: buyerId,
+                    role: 'buyer',
+                    email: `guest-${buyerId}@temp.whola.in` 
+                });
+            }
+            // Use the MongoDB _id for the chat record
+            targetUserId = user._id.toString();
         }
 
-        // PII Check (Strict)
-        const piiCheck = checkPII(message);
-        if (!piiCheck.isSafe) {
-            return NextResponse.json(
-                { success: false, error: `Message content not allowed: ${piiCheck.detected} detected.` },
-                { status: 400 }
-            );
-        }
-
-        // Save Message to Database
-        const newChat = await Chat.create({
+        // 4. Create New Chat Message (Single Document)
+        // FIX: Replaced array logic with single document creation to match Schema
+        const chat = await Chat.create({
             sellerId: sellerId,
-            userId: buyerId,
+            userId: targetUserId,
             sender: 'seller',
             message: message,
             type: 'TEXT',
             isBlocked: false,
-            createdAt: new Date()
+            // createdAt is automatically handled by { timestamps: true } in schema
         });
 
-        // 1. NOTIFICATION TO BUYER
-        const websiteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL;
-        const chatLink = `${websiteUrl}/buyer/messages?sellerId=${sellerId}`;
+        return NextResponse.json({ success: true, data: chat });
 
-        try {
-            const buyer = await User.findById(buyerId);
-            if (buyer && buyer.phone) {
-                const buyerMessage = `📢 *New Reply from Seller!*
-
-A seller has replied to your inquiry.
-
-👤 *Seller Message:* "${message}"
-
-👇 *Click below to Reply:*
-${chatLink}
-
-_Note: Please continue on the website to have the deal._
-_Tip: If the link is not clickable, please reply "Hi" to this message._`;
-
-                sendChatNotification(buyer.phone, buyerMessage);
-                console.log(`📨 Notification sent to Buyer ${buyer.phone}`);
-            }
-        } catch (err) {
-            console.error('Error sending buyer notification:', err);
-        }
-
-        // 3. Admin Monitoring (ENHANCED - Send seller reply to admin with full details)
-        const seller = await Seller.findById(sellerId);
-        const sellerName = seller?.name || "Unknown Seller";
-        const sellerPhone = seller?.phone || "N/A";
-
-        const buyerInfo = await User.findById(buyerId);
-        const buyerName = buyerInfo?.name || "Unknown Buyer";
-        const buyerPhone = buyerInfo?.phone || "N/A";
-
-        // Admin monitoring link (no login required)
-        const adminToken = process.env.ADMIN_MONITOR_TOKEN || 'admin123secure';
-        const adminMonitorLink = `${websiteUrl}/admin/monitor?token=${adminToken}&buyerId=${buyerId}&sellerId=${sellerId}`;
-
-        const adminMessage = `👮 *CHAT MONITOR: Seller → Buyer*
-
-🏪 *SELLER INFO:*
-• Name: ${sellerName}
-• WhatsApp: ${sellerPhone}
-
-📱 *BUYER INFO:*
-• Name: ${buyerName}
-• WhatsApp: ${buyerPhone}
-
-💬 *MESSAGE:* "${message}"
-
-🔗 *Monitor Live:* ${adminMonitorLink}`;
-
-        sendChatNotification(ADMIN_PHONE, adminMessage);
-        console.log(`📨 Admin notification sent to ${ADMIN_PHONE}`);
-
-        return NextResponse.json({ success: true });
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("Seller Send Error:", error);
-        return NextResponse.json({ success: false, error: "Server Error" }, { status: 500 });
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }

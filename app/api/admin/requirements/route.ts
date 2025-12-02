@@ -16,131 +16,100 @@ export async function GET() {
 export async function POST(req: Request) {
     try {
         await dbConnect();
-        const { requestId, mode, manualData } = await req.json();
+        const body = await req.json();
+        const { action, requestId } = body;
 
         const request = await Request.findById(requestId);
         if (!request) return NextResponse.json({ success: false, error: "Request not found" });
 
-        let targetSellers: any[] = [];
-
-        // =================================================
-        // 1. FIND OR CREATE SELLERS BASED ON MODE
-        // =================================================
-
-        // --- MODE A: DATABASE MATCH ---
-        if (mode === 'database') {
-            targetSellers = await Seller.find({
-                $or: [
-                    { category: { $regex: request.category || request.product, $options: 'i' } },
-                    { tags: { $in: [new RegExp(request.product, 'i')] } },
-                    { name: { $regex: request.product, $options: 'i' } }
-                ]
-            }).limit(15);
-        }
-        
-        // --- MODE B: JIT SCRAPER ---
-        else if (mode === 'jit') {
-            const query = `Wholesalers of ${request.product} in ${request.city || 'India'}`;
-            console.log("Running JIT Scraper for:", query);
-            targetSellers = await scrapeAndSaveSellers(query, request.product) || [];
+        // --- ACTION 1: UPDATE STATUS (OPEN / FULFILLED) ---
+        if (action === 'updateStatus') {
+            const { status } = body;
+            request.status = status;
+            await request.save();
+            return NextResponse.json({ success: true, message: `Status updated to ${status}` });
         }
 
-        // --- MODE C: MANUAL ENTRY (Secure Way) ---
-        else if (mode === 'manual') {
-            if (!manualData?.phone) return NextResponse.json({ success: false, error: "Phone required" });
-            
-            // We MUST create a Seller Record for them, otherwise they can't login/chat
-            // Check if exists first to avoid duplicates
-            let manualSeller = await Seller.findOne({ phone: manualData.phone });
+        // --- ACTION 2: PROCESS LEAD (Send Chat Invites) ---
+        if (action === 'process') {
+            const { mode, manualData } = body;
+            let targetSellers: any[] = [];
 
-            if (!manualSeller) {
-                manualSeller = await Seller.create({
-                    name: manualData.name || 'Merchant',
-                    phone: manualData.phone,
-                    category: request.category || 'General',
-                    city: request.city || 'India',
-                    tags: ['Manual Entry', 'Lead Fulfillment'],
-                    isVerified: true // We trust admin input
-                });
+            // 1. SELECT SELLERS
+            if (mode === 'database') {
+                targetSellers = await Seller.find({
+                    $or: [
+                        { category: { $regex: request.category || request.product, $options: 'i' } },
+                        { tags: { $in: [new RegExp(request.product, 'i')] } }
+                    ]
+                }).limit(15);
+            } else if (mode === 'jit') {
+                const query = `Wholesalers of ${request.product} in ${request.city || 'India'}`;
+                targetSellers = await scrapeAndSaveSellers(query, request.product) || [];
+            } else if (mode === 'manual') {
+                // Ensure manualData is valid array
+                if (Array.isArray(manualData)) {
+                    for (const data of manualData) {
+                        if (data.phone) {
+                            // Find or Create temporary seller record
+                            let manualSeller = await Seller.findOne({ phone: data.phone });
+                            if (!manualSeller) {
+                                manualSeller = await Seller.create({
+                                    name: data.name || 'Merchant',
+                                    phone: data.phone,
+                                    isVerified: true,
+                                    tags: ['Manual Lead']
+                                });
+                            }
+                            targetSellers.push(manualSeller);
+                        }
+                    }
+                }
             }
-            targetSellers = [manualSeller];
-        }
 
-        if (!targetSellers || targetSellers.length === 0) {
-            return NextResponse.json({ success: false, error: `No sellers found using mode: ${mode}` });
-        }
+            if (!targetSellers.length) return NextResponse.json({ success: false, error: "No sellers found" });
 
-        // =================================================
-        // 2. SEND NOTIFICATIONS (PRIVACY FOCUSED)
-        // =================================================
+            // 2. GENERATE LINKS & SEND
+            // We encode the Buyer Name so it can be passed in the URL safely
+            const buyerNameParam = encodeURIComponent(request.buyerName || "Buyer");
+            const buyerPhoneParam = request.buyerPhone; // Used as ID
+            
+            // This Link opens the Seller Chat and forces the Buyer Name to appear
+            const chatLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/messages?buyerId=${buyerPhoneParam}&buyerName=${buyerNameParam}`;
 
-        // A. NOTIFY SELLERS (Send Link to Seller Dashboard)
-        const sellerLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/dashboard/leads`; // Link to Lead
-        
-        const sellerMessage = `📦 *New Business Opportunity!*
-        
-Item: *${request.product}*
-Qty: ${request.quantity}
-Location: ${request.city || 'India'}
+            const sellerMessage = `📦 *New Lead: ${request.product}*
+Qty: ${request.quantity} | Target: ₹${request.estimatedPrice}
 
-✅ A verified buyer is waiting. 
-👇 Click here to accept the deal & chat:
-${sellerLink}`;
+Buyer: ${request.buyerName}
+Status: *Waiting for Quote*
 
-        const sellerPromises = targetSellers.map((seller: any) => {
-            // Clean phone
-            let phone = seller.phone?.replace(/\D/g, ''); 
-            if (!phone) return Promise.resolve();
-            if (phone.length === 10) phone = '91' + phone; 
+👇 *Click to Chat with Buyer:*
+${chatLink}`;
 
-            return fetch(`${WHATSAPP_BOT_URL}/send-message`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone, message: sellerMessage })
-            });
-        });
+            const sellerPromises = targetSellers.map((seller: any) => {
+                let phone = seller.phone?.replace(/\D/g, ''); 
+                if (!phone) return Promise.resolve();
+                if (phone.length === 10) phone = '91' + phone; 
 
-        // B. NOTIFY BUYER (Send Link to Buyer Dashboard)
-        // Only send if we actually found sellers
-        if (request.buyerPhone) {
-             let buyerPhone = request.buyerPhone.replace(/\D/g, '');
-             if (buyerPhone.length === 10) buyerPhone = '91' + buyerPhone;
-
-             const buyerLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/buyer/dashboard`;
-             const buyerMessage = `🎉 *Good News!*
-             
-We found ${targetSellers.length} sellers for your requirement: *${request.product}*.
-
-They have been notified and will contact you shortly via our secure chat.
-
-👇 Click here to track responses:
-${buyerLink}`;
-
-             sellerPromises.push(
-                 fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+                return fetch(`${WHATSAPP_BOT_URL}/send-message`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: buyerPhone, message: buyerMessage })
-                })
-             );
+                    body: JSON.stringify({ phone, message: sellerMessage })
+                });
+            });
+
+            await Promise.allSettled(sellerPromises);
+
+            return NextResponse.json({ 
+                success: true, 
+                message: `Sent to ${targetSellers.length} sellers. Request remains OPEN.` 
+            });
         }
 
-        // Execute all messages
-        await Promise.allSettled(sellerPromises);
+        return NextResponse.json({ success: false, error: "Invalid action" });
 
-        // =================================================
-        // 3. UPDATE STATUS
-        // =================================================
-        request.status = "FULFILLED";
-        await request.save();
-
-        return NextResponse.json({ 
-            success: true, 
-            message: `Success! Notifications sent to Buyer & ${targetSellers.length} Sellers.` 
-        });
-
-    } catch (error) {
+    } catch (error: any) {
         console.error("Admin Process Error:", error);
-        return NextResponse.json({ success: false, error: "Processing failed" }, { status: 500 });
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 }
