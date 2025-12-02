@@ -168,7 +168,7 @@ function SellerChatInterface() {
                         <div className="flex-1 overflow-y-auto p-4 md:px-16" ref={scrollRef} style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')", backgroundBlendMode: 'overlay' }}>
                             {messages.map((msg) => (
                                 <div key={msg._id} className={`flex mb-2 ${msg.sender === 'seller' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`relative max-w-[85%] rounded-lg px-3 py-1.5 shadow-sm text-[14.2px] break-words ${msg.sender === 'seller' ? 'bg-[#d9fdd3] text-[#111b21]' : 'bg-white text-[#111b21]'}`}>
+                                    <div className={`relative max-w-[85%] rounded-lg px-3 py-1.5 shadow-sm text-[14.2px] break-words ${msg.sender === 'seller' ? 'bg-[#d9fdd3] text-black' : 'bg-white text-black'}`}>
                                         <div>{msg.message}</div>
                                         <div className="text-[11px] text-[#667781] text-right mt-1 flex justify-end items-center gap-1">
                                             {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -181,7 +181,13 @@ function SellerChatInterface() {
 
                         <footer className="bg-[#f0f2f5] min-h-[62px] px-4 py-2 flex items-center gap-3 z-10">
                             <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2">
-                                <input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message" className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-0" />
+                                <input 
+                                    value={input} 
+                                    onChange={(e) => setInput(e.target.value)} 
+                                    onKeyPress={(e) => e.key === 'Enter' && handleSend()} 
+                                    placeholder="Type a message" 
+                                    className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-0 text-black" 
+                                />
                             </div>
                             <button onClick={handleSend} disabled={!input.trim() || sending} className="text-[#54656f] hover:text-[#00a884]">
                                 {sending ? <Loader2 className="animate-spin" size={24} /> : <Send size={24} />}

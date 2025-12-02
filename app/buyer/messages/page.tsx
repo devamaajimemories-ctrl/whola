@@ -30,9 +30,15 @@ function BuyerChatInterface() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const initialSellerId = searchParams.get('sellerId');
+    const paramSellerName = searchParams.get('sellerName');
 
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeSellerId, setActiveSellerId] = useState<string | null>(initialSellerId);
+    
+    // Store Seller Name logic
+    const [activeName, setActiveName] = useState<string>(paramSellerName || "Supplier");
+    const [isVerified, setIsVerified] = useState<boolean>(false);
+
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(true);
@@ -64,13 +70,19 @@ function BuyerChatInterface() {
         return () => clearInterval(interval);
     }, []);
 
+    // Update Seller Name when switching chats or list loads
     useEffect(() => {
         if (activeSellerId) {
+            const conv = conversations.find(c => c._id === activeSellerId);
+            if (conv) {
+                setActiveName(conv.seller.name);
+                setIsVerified(conv.seller.isVerified);
+            }
             fetchMessages(activeSellerId);
             const interval = setInterval(() => fetchMessages(activeSellerId), 3000);
             return () => clearInterval(interval);
         }
-    }, [activeSellerId]);
+    }, [activeSellerId, conversations]);
 
     useEffect(() => {
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -87,6 +99,7 @@ function BuyerChatInterface() {
             });
             setInput("");
             fetchMessages(activeSellerId);
+            fetchConversations(); // Refresh list to update snippet
         } catch (e) { alert("Failed to send"); }
         finally { setSending(false); }
     };
@@ -95,10 +108,6 @@ function BuyerChatInterface() {
         setActiveSellerId(null);
         router.push('/buyer/messages');
     };
-
-    const activeConv = conversations.find(c => c._id === activeSellerId);
-    const activeName = activeConv?.seller?.name || "Supplier";
-    const isVerified = activeConv?.seller?.isVerified;
 
     return (
         <div className="flex h-[calc(100vh-64px)] bg-[#d1d7db] overflow-hidden font-sans">
@@ -124,7 +133,7 @@ function BuyerChatInterface() {
                 <div className="p-2 bg-white border-b border-[#f0f2f5]">
                     <div className="bg-[#f0f2f5] rounded-lg flex items-center px-3 py-1.5 h-[35px]">
                         <Search size={18} className="text-[#54656f] mr-4" />
-                        <input placeholder="Search suppliers..." className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder-[#54656f]" />
+                        <input placeholder="Search suppliers..." className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder-[#54656f] text-black" />
                     </div>
                 </div>
 
@@ -195,7 +204,7 @@ function BuyerChatInterface() {
                                 <div key={msg._id} className={`flex mb-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`
                                         relative max-w-[85%] md:max-w-[65%] rounded-lg px-3 py-1.5 shadow-sm text-[14.2px] leading-[19px] break-words
-                                        ${msg.sender === 'user' ? 'bg-[#d9fdd3] text-[#111b21] rounded-tr-none' : 'bg-white text-[#111b21] rounded-tl-none'}
+                                        ${msg.sender === 'user' ? 'bg-[#d9fdd3] text-black rounded-tr-none' : 'bg-white text-black rounded-tl-none'}
                                     `}>
                                          {msg.type === 'OFFER' && <div className="text-xs font-bold text-orange-600 mb-1">SPECIAL OFFER</div>}
                                          {msg.type === 'PAYMENT_LINK' && <div className="text-xs font-bold text-blue-600 mb-1">INVOICE</div>}
@@ -219,7 +228,7 @@ function BuyerChatInterface() {
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                                     placeholder="Type a message"
-                                    className="w-full bg-transparent border-none focus:ring-0 text-[15px] text-[#3b4a54] p-0 placeholder-[#54656f]"
+                                    className="w-full bg-transparent border-none focus:ring-0 text-[15px] text-black p-0 placeholder-[#54656f]"
                                 />
                             </div>
                             <button onClick={handleSend} disabled={!input.trim() || sending} className="text-[#54656f] hover:text-[#00a884] transition-colors">

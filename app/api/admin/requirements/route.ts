@@ -1,15 +1,31 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
-import Request from "@/lib/models/Request";
+import RequestModel from "@/lib/models/Request";
 import Seller from "@/lib/models/Seller";
+import Chat from "@/lib/models/Chat";
+import User from "@/lib/models/User";
 import { scrapeAndSaveSellers } from "@/lib/scraper-service";
 
 const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
 export const dynamic = 'force-dynamic';
 
+// Helper to Send WhatsApp
+async function sendWhatsApp(phone: string, message: string) {
+    if (!phone || phone.length < 10) return;
+    try {
+        await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, message })
+        });
+    } catch (e) {
+        console.error(`WhatsApp Fail (${phone}):`, e);
+    }
+}
+
 export async function GET() {
     await dbConnect();
-    const requirements = await Request.find({}).sort({ createdAt: -1 });
+    const requirements = await RequestModel.find({}).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: requirements });
 }
 
@@ -19,10 +35,10 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { action, requestId } = body;
 
-        const request = await Request.findById(requestId);
+        const request = await RequestModel.findById(requestId);
         if (!request) return NextResponse.json({ success: false, error: "Request not found" });
 
-        // --- ACTION 1: UPDATE STATUS (OPEN / FULFILLED) ---
+        // --- ACTION 1: UPDATE STATUS ---
         if (action === 'updateStatus') {
             const { status } = body;
             request.status = status;
@@ -30,12 +46,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: true, message: `Status updated to ${status}` });
         }
 
-        // --- ACTION 2: PROCESS LEAD (Send Chat Invites) ---
+        // --- ACTION 2: ADMIN APPROVES & CONNECTS (The Main Logic) ---
         if (action === 'process') {
             const { mode, manualData } = body;
             let targetSellers: any[] = [];
 
-            // 1. SELECT SELLERS
+            // 1. SELECT SELLERS (Database, JIT, or Manual)
             if (mode === 'database') {
                 targetSellers = await Seller.find({
                     $or: [
@@ -47,11 +63,9 @@ export async function POST(req: Request) {
                 const query = `Wholesalers of ${request.product} in ${request.city || 'India'}`;
                 targetSellers = await scrapeAndSaveSellers(query, request.product) || [];
             } else if (mode === 'manual') {
-                // Ensure manualData is valid array
                 if (Array.isArray(manualData)) {
                     for (const data of manualData) {
                         if (data.phone) {
-                            // Find or Create temporary seller record
                             let manualSeller = await Seller.findOne({ phone: data.phone });
                             if (!manualSeller) {
                                 manualSeller = await Seller.create({
@@ -69,40 +83,81 @@ export async function POST(req: Request) {
 
             if (!targetSellers.length) return NextResponse.json({ success: false, error: "No sellers found" });
 
-            // 2. GENERATE LINKS & SEND
-            // We encode the Buyer Name so it can be passed in the URL safely
-            const buyerNameParam = encodeURIComponent(request.buyerName || "Buyer");
-            const buyerPhoneParam = request.buyerPhone; // Used as ID
-            
-            // This Link opens the Seller Chat and forces the Buyer Name to appear
-            const chatLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/messages?buyerId=${buyerPhoneParam}&buyerName=${buyerNameParam}`;
+            // 2. GET BUYER ID (Required for Chat System)
+            // We try to find the registered user by phone so the chat appears in their dashboard
+            const buyerUser = await User.findOne({ phone: request.buyerPhone });
+            const buyerId = buyerUser ? buyerUser._id.toString() : request.buyerPhone; // Fallback to phone if no user found
 
-            const sellerMessage = `📦 *New Lead: ${request.product}*
-Qty: ${request.quantity} | Target: ₹${request.estimatedPrice}
+            // 3. EXECUTE SIMULTANEOUS CONNECTION LOOP
+            const processPromises = targetSellers.map(async (seller) => {
+                
+                // --- A. SYSTEM GENERATED MESSAGES ---
+                // Message 1: From Buyer (System Typed)
+                const buyerSystemMsg = `REQUIREMENT DETAILS:
+📦 Product: ${request.product}
+🔢 Quantity: ${request.quantity}
+💰 Target Price: ₹${request.estimatedPrice}
+📍 Location: ${request.city || 'India'}
 
-Buyer: ${request.buyerName}
-Status: *Waiting for Quote*
+${request.description ? `📝 Description: ${request.description}` : ''}`;
+                
+                // Message 2: From Seller (System Typed)
+                const sellerSystemMsg = `✅ SYSTEM: I am ready to supply this item. Let's discuss details.`;
 
-👇 *Click to Chat with Buyer:*
-${chatLink}`;
+                // --- B. CREATE CHAT IN DATABASE ---
+                // Check if chat exists to avoid duplicates
+                const existingChat = await Chat.findOne({ sellerId: seller._id, userId: buyerId, message: buyerSystemMsg });
 
-            const sellerPromises = targetSellers.map((seller: any) => {
-                let phone = seller.phone?.replace(/\D/g, ''); 
-                if (!phone) return Promise.resolve();
-                if (phone.length === 10) phone = '91' + phone; 
+                if (!existingChat) {
+                    // 1. Create Buyer's Message
+                    await Chat.create({
+                        sellerId: seller._id,
+                        userId: buyerId,
+                        sender: 'user', // "Buyer" sender
+                        message: buyerSystemMsg,
+                        type: 'TEXT',
+                        createdAt: new Date(Date.now() - 1000) // 1 second ago
+                    });
 
-                return fetch(`${WHATSAPP_BOT_URL}/send-message`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone, message: sellerMessage })
-                });
+                    // 2. Create Seller's Auto-Reply
+                    await Chat.create({
+                        sellerId: seller._id,
+                        userId: buyerId,
+                        sender: 'seller', // "Seller" sender
+                        message: sellerSystemMsg,
+                        type: 'TEXT',
+                        createdAt: new Date() // Now
+                    });
+
+                    // --- C. NOTIFY SELLER (WhatsApp) ---
+                    const sellerLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/messages?buyerId=${buyerId}`;
+                    const sellerWhatsapp = `🚀 *New Lead Assigned!*
+                    
+📦 Product: ${request.product}
+🔢 Qty: ${request.quantity}
+
+System has auto-connected you with the buyer.
+👇 *Open Chat:*
+${sellerLink}`;
+                    await sendWhatsApp(seller.phone, sellerWhatsapp);
+
+                    // --- D. NOTIFY BUYER (WhatsApp) ---
+                    const buyerLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/buyer/messages?sellerId=${seller._id}`;
+                    const buyerWhatsapp = `🤝 *Seller Connected!*
+                    
+Your requirement for *${request.product}* has been accepted by *${seller.name}*.
+
+👇 *Chat Now:*
+${buyerLink}`;
+                    await sendWhatsApp(request.buyerPhone, buyerWhatsapp);
+                }
             });
 
-            await Promise.allSettled(sellerPromises);
+            await Promise.allSettled(processPromises);
 
             return NextResponse.json({ 
                 success: true, 
-                message: `Sent to ${targetSellers.length} sellers. Request remains OPEN.` 
+                message: `Successfully connected ${targetSellers.length} sellers. Chats created & Notifications sent.` 
             });
         }
 

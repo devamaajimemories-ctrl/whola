@@ -5,12 +5,30 @@ import Chat from "@/lib/models/Chat";
 import User from "@/lib/models/User";
 import Seller from "@/lib/models/Seller";
 
+const WHATSAPP_BOT_URL = process.env.WHATSAPP_BOT_URL || 'http://localhost:4000';
+
+async function notifyBuyer(phone: string, sellerName: string, message: string) {
+    if (!phone) return;
+    try {
+        await fetch(`${WHATSAPP_BOT_URL}/send-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                phone, 
+                message: `💬 *Message from ${sellerName}*\n\n"${message}"\n\n👉 Reply on Website: ${process.env.NEXT_PUBLIC_WEBSITE_URL}/buyer/messages` 
+            })
+        });
+    } catch (e) {
+        console.error("Failed to notify buyer:", e);
+    }
+}
+
 // POST: Seller sends a message to a Buyer
 export async function POST(req: Request) {
     try {
         await dbConnect();
         
-        // 1. Authenticate Seller (Using Headers from Middleware)
+        // 1. Authenticate Seller
         const headersList = await headers();
         const userId = headersList.get("x-user-id"); 
         
@@ -20,25 +38,23 @@ export async function POST(req: Request) {
 
         const { buyerId, message, buyerName } = await req.json();
 
-        // 2. Validate Seller ID
-        // The userId from headers IS the Seller ID based on your Auth implementation
-        const isSeller = await Seller.exists({ _id: userId });
-        if (!isSeller) {
+        // 2. Find the Seller Profile
+        const seller = await Seller.findById(userId);
+        if (!seller) {
              return NextResponse.json({ success: false, error: "Seller profile not found" }, { status: 404 });
         }
         const sellerId = userId;
 
         // 3. Handle Buyer ID (Phone vs MongoID)
-        // If the buyerId is a phone number (from a lead), we find/create the User to get a valid MongoID
         let targetUserId = buyerId;
-        const isPhone = /^\d+$/.test(buyerId); // Check if it's a phone number
+        let buyerPhone = "";
+        const isPhone = /^\d+$/.test(buyerId); 
 
         if (isPhone) {
-            // It's a phone number. Find the user or create a temporary one.
+            // Buyer ID is a phone number (Guest/Legacy)
+            buyerPhone = buyerId;
             let user = await User.findOne({ phone: buyerId });
-            
             if (!user) {
-                // AUTO-CREATE USER so the chat works immediately
                 user = await User.create({
                     name: buyerName || "Guest Buyer",
                     phone: buyerId,
@@ -46,12 +62,14 @@ export async function POST(req: Request) {
                     email: `guest-${buyerId}@temp.whola.in` 
                 });
             }
-            // Use the MongoDB _id for the chat record
             targetUserId = user._id.toString();
+        } else {
+            // Buyer ID is MongoID (Registered User)
+            const user = await User.findById(buyerId);
+            if (user) buyerPhone = user.phone || "";
         }
 
-        // 4. Create New Chat Message (Single Document)
-        // FIX: Replaced array logic with single document creation to match Schema
+        // 4. Create New Chat Message
         const chat = await Chat.create({
             sellerId: sellerId,
             userId: targetUserId,
@@ -59,8 +77,12 @@ export async function POST(req: Request) {
             message: message,
             type: 'TEXT',
             isBlocked: false,
-            // createdAt is automatically handled by { timestamps: true } in schema
         });
+
+        // 5. [NEW] Notify Buyer via WhatsApp
+        if (buyerPhone) {
+            notifyBuyer(buyerPhone, seller.name, message);
+        }
 
         return NextResponse.json({ success: true, data: chat });
 
