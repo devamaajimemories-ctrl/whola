@@ -366,10 +366,10 @@ export default function Navbar() {
             </div>
             <div>
               <p className="text-sm font-bold text-gray-800 flex items-center justify-center sm:justify-start gap-1.5">
-                Tell us what you need! <span className="hidden sm:inline">-</span> <span className="font-normal text-gray-600">Get quotes from verified sellers.</span>
+                Post your Requirement & Get contacted by Verified Sellers!
               </p>
               <p className="text-xs text-blue-600 mt-0.5 flex items-center justify-center sm:justify-start gap-1">
-                <CheckCircle size={12} /> Verified Sellers • Fast Response • Best Prices
+                <CheckCircle size={12} /> We take 5% commission from sellers • No Hidden Charges
               </p>
             </div>
           </div>
