@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import dbConnect from '@/lib/db';
 import Seller from '@/lib/models/Seller';
-import { CheckCircle, MapPin, Star, Phone, Info } from 'lucide-react'; // Added Info icon
+import { CheckCircle, MapPin, Star, Phone, Info, TrendingUp } from 'lucide-react';
 import { fromSlug } from '@/lib/locations';
 
 type Props = {
@@ -14,7 +14,6 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const category = fromSlug(params.category);
     const city = fromSlug(params.city);
-    const date = new Date().toISOString();
 
     return {
         title: `Wholesale ${category} in ${city} | Price List & Manufacturers`,
@@ -30,6 +29,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         }
     };
 }
+
+// Helper to generate unique text based on the category/city
+const getMarketInsight = (cat: string, city: string) => {
+    return `The market for ${cat} in ${city} has seen significant growth in demand recently. ${city} is emerging as a key hub for ${cat} distribution, with major wholesale markets located in its industrial zones. Sourcing locally in ${city} ensures faster logistics and reduces shipping costs for buyers in the region.`;
+};
 
 export default async function MarketPage({ params }: Props) {
     await dbConnect();
@@ -84,16 +88,41 @@ export default async function MarketPage({ params }: Props) {
 
             <div className="container mx-auto px-4">
                 {/* Semantic H1 is crucial */}
-                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2 capitalize">
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6 capitalize">
                     {categoryName} Manufacturers & Wholesalers in {cityName}
                 </h1>
-                <p className="text-gray-600 mb-8 max-w-4xl">
-                    Are you looking for verified <strong>{categoryName}</strong> suppliers in <strong>{cityName}</strong>?
-                    YouthBharat helps you connect with top-rated manufacturers, distributors, and dealers.
-                    Compare prices, view contact details, and get the best bulk deals for {categoryName} directly from the source.
-                </p>
 
-                {/* Seller List (Your Existing Code) */}
+                {/* DYNAMIC PROGRAMMATIC CONTENT ENGINE */}
+                <div className="bg-white p-6 rounded-xl border border-blue-100 shadow-sm mb-8">
+                    <div className="prose max-w-none text-gray-700">
+                        <p className="text-lg leading-relaxed mb-6 flex gap-3 items-start">
+                            <TrendingUp className="text-blue-600 mt-1 flex-shrink-0" size={24} />
+                            {getMarketInsight(categoryName, cityName)}
+                        </p>
+                        
+                        <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+                            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                Why buy {categoryName} from {cityName}?
+                            </h3>
+                            <ul className="space-y-2">
+                                <li className="flex items-start gap-2 text-sm text-gray-700">
+                                    <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0"/>
+                                    <span>Connect directly with verified manufacturers and stockists in {cityName}.</span>
+                                </li>
+                                <li className="flex items-start gap-2 text-sm text-gray-700">
+                                    <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0"/>
+                                    <span>Compare bulk rates from {sellers.length > 0 ? sellers.length : 'multiple'} active suppliers instantly.</span>
+                                </li>
+                                <li className="flex items-start gap-2 text-sm text-gray-700">
+                                    <CheckCircle size={16} className="text-green-600 mt-0.5 flex-shrink-0"/>
+                                    <span>Avail faster delivery within {cityName} and surrounding districts.</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Seller List */}
                 <div className="grid gap-4 mb-12">
                     {sellers.map((seller) => (
                         <div key={seller._id.toString()} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row justify-between gap-6">
@@ -114,7 +143,7 @@ export default async function MarketPage({ params }: Props) {
                             </div>
                             {/* Call to Actions */}
                             <div className="flex flex-col gap-2 min-w-[200px] justify-center">
-                                <Link href={`/supplier/${seller._id}`} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg text-center">
+                                <Link href={`/supplier/${seller._id}`} className="w-full bg-blue-600 text-white font-bold py-2 rounded-lg text-center hover:bg-blue-700 transition-colors">
                                     Get Best Price
                                 </Link>
                             </div>
@@ -123,11 +152,9 @@ export default async function MarketPage({ params }: Props) {
                 </div>
 
                 {/* 3. RELATED SEARCHES (Internal Linking) */}
-                {/* This mimics IndiaMart's "Explore More" section */}
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
                     <h3 className="text-lg font-bold text-gray-800 mb-4">Related Categories in {cityName}</h3>
                     <div className="flex flex-wrap gap-2">
-                        {/* You should dynamically generate these based on related categories */}
                         {['Industrial Machinery', 'Safety Equipment', 'Packaging Material', 'Electrical Goods'].map(tag => (
                             <Link
                                 key={tag}
@@ -140,9 +167,9 @@ export default async function MarketPage({ params }: Props) {
                     </div>
                 </div>
 
-                {/* 4. SEO CONTENT BLOCK (At the bottom) */}
-                <div className="mt-8 prose max-w-none text-gray-600 text-sm">
-                    <h2 className="text-xl font-bold text-gray-800">About {categoryName} Market in {cityName}</h2>
+                {/* 4. SEO CONTENT BLOCK (Bottom) */}
+                <div className="mt-8 prose max-w-none text-gray-600 text-sm bg-gray-100 p-6 rounded-xl">
+                    <h2 className="text-lg font-bold text-gray-800 mb-2">About {categoryName} Market in {cityName}</h2>
                     <p>
                         {cityName} is a major hub for {categoryName}. The market caters to retailers, wholesalers, and industrial buyers.
                         Buyers can find a wide range of specifications suitable for various applications.

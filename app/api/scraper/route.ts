@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers"; // Added for IP detection
 import chromium from "@sparticuz/chromium-min";
 import puppeteer from "puppeteer-core";
 import dbConnect from "@/lib/db";
@@ -8,9 +9,30 @@ import Seller from "@/lib/models/Seller";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
+// Simple in-memory store for rate limiting
+// Note: This resets on serverless cold start. For production, use Redis/Vercel KV.
+const rateLimit = new Map<string, number>();
+
 export async function POST(req: Request) {
     try {
-        // 1. SETUP
+        // 1. SECURITY & RATE LIMITING
+        const headersList = await headers();
+        // Get IP address (Works on Vercel and standard proxies)
+        const ip = headersList.get("x-forwarded-for") || "unknown";
+        
+        const lastRequest = rateLimit.get(ip);
+        const COOLDOWN = 10000; // 10 seconds cooldown
+
+        if (lastRequest && Date.now() - lastRequest < COOLDOWN) {
+            return NextResponse.json(
+                { success: false, error: "Too many requests. Please wait 10 seconds." }, 
+                { status: 429 }
+            );
+        }
+        // Update timestamp for this IP
+        rateLimit.set(ip, Date.now());
+
+        // 2. SETUP
         const body = await req.json();
         const { query, config } = body;
 
@@ -18,12 +40,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ success: false, error: "Query is required" }, { status: 400 });
         }
 
-        console.log(`🔍 [Scraper] Starting for: "${query}"`);
+        console.log(`🔍 [Scraper] Starting for: "${query}" (IP: ${ip})`);
 
         // Connect to DB immediately to ensure we can save later
         await dbConnect();
 
-        // 2. BROWSER PATH DETECTION
+        // 3. BROWSER PATH DETECTION
         let executablePath = process.env.CHROME_EXECUTABLE_PATH;
 
         if (!executablePath) {
@@ -46,18 +68,18 @@ export async function POST(req: Request) {
             ? true
             : (config?.headless !== undefined ? config.headless : true);
 
-        // 3. LAUNCH BROWSER
+        // 4. LAUNCH BROWSER
         const browser = await puppeteer.launch({
             args: process.env.NODE_ENV === 'production' ? chromium.args : ['--start-maximized'],
             defaultViewport: null,
             executablePath: executablePath,
-            headless: isHeadless, // Use boolean directly
+            headless: isHeadless, 
             ignoreDefaultArgs: ['--enable-automation'],
         });
 
         const page = await browser.newPage();
 
-        // 4. NAVIGATE
+        // 5. NAVIGATE
         // We search directly on Google Maps
         const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}/@?hl=en`;
 
@@ -67,7 +89,7 @@ export async function POST(req: Request) {
             console.log("⚠️ [Scraper] Navigation took too long, but continuing...");
         }
 
-        // 5. AUTO-SCROLL (Crucial for loading data)
+        // 6. AUTO-SCROLL (Crucial for loading data)
         try {
             await page.waitForSelector('div[role="feed"]', { timeout: 15000 });
             await page.evaluate(async () => {
@@ -95,7 +117,7 @@ export async function POST(req: Request) {
             console.log("⚠️ [Scraper] Feed selector not found, scraping visible items only.");
         }
 
-        // 6. EXTRACT DATA
+        // 7. EXTRACT DATA
         const rawSellers = await page.evaluate(() => {
             const items = Array.from(document.querySelectorAll('div[role="article"]'));
 
@@ -113,11 +135,14 @@ export async function POST(req: Request) {
 
                 // Simple City Detection
                 let city = "India";
-                if (text.includes("Mumbai")) city = "Mumbai";
-                else if (text.includes("Delhi")) city = "Delhi";
-                else if (text.includes("Bangalore")) city = "Bangalore";
-                else if (text.includes("Chennai")) city = "Chennai";
-                else if (text.includes("Kolkata")) city = "Kolkata";
+                const majorCities = ["Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Pune", "Ahmedabad", "Surat", "Jaipur"];
+                
+                for (const c of majorCities) {
+                    if (text.includes(c)) {
+                        city = c;
+                        break;
+                    }
+                }
 
                 return {
                     name: name || "Unknown Seller",
@@ -129,14 +154,13 @@ export async function POST(req: Request) {
 
         await browser.close();
 
-        // 7. DATABASE SYNC (Auto-Save)
-        // Filter valid data
+        // 8. DATABASE SYNC (Auto-Save)
         const validSellers = rawSellers.filter(s => s.phone !== "No Phone" && s.name !== "Unknown Seller");
 
         if (validSellers.length > 0) {
             console.log(`💾 [Scraper] Saving ${validSellers.length} items to MongoDB...`);
 
-            // Prepare Bulk Operations
+            // Prepare Bulk Operations for efficiency
             const operations = validSellers.map(seller => ({
                 updateOne: {
                     filter: { phone: seller.phone }, // Use Phone as unique ID
@@ -144,7 +168,7 @@ export async function POST(req: Request) {
                         $set: {
                             name: seller.name,
                             city: seller.city,
-                            // IMPORTANT: Save the SEARCH QUERY as the Category so Search finds it
+                            // IMPORTANT: Save the SEARCH QUERY as the Category so Search finds it immediately
                             category: query,
                             tags: [query, seller.city, "Scraped", "Verified"],
                             isVerified: true

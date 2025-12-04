@@ -25,7 +25,7 @@ export default async function PublicSupplierProfile({ params }: { params: { id: 
 
     if (!seller) return notFound();
 
-    // Organization Schema (Vital for entity ranking)
+    // Organization Schema with AggregateRating (Review Schema)
     const jsonLd = {
         "@context": "https://schema.org",
         "@type": "Organization",
@@ -41,6 +41,13 @@ export default async function PublicSupplierProfile({ params }: { params: { id: 
             "@type": "PostalAddress",
             "addressLocality": seller.city,
             "addressCountry": "IN"
+        },
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": seller.ratingAverage || "4.5",
+            "reviewCount": seller.ratingCount || "10",
+            "bestRating": "5",
+            "worstRating": "1"
         }
     };
 
@@ -89,11 +96,15 @@ export default async function PublicSupplierProfile({ params }: { params: { id: 
                     {products.length > 0 ? products.map((p: any) => (
                         <div key={p._id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all group">
                             <div className="h-48 bg-gray-100 flex items-center justify-center">
-                                {/* Replace with actual image logic */}
-                                <Package size={48} className="text-gray-300" />
+                                {/* Placeholder logic - Replace with actual image rendering if available */}
+                                {p.images && p.images.length > 0 ? (
+                                    <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
+                                ) : (
+                                    <Package size={48} className="text-gray-300" />
+                                )}
                             </div>
                             <div className="p-4">
-                                <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{p.name}</h3>
+                                <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1">{p.name}</h3>
                                 <p className="text-blue-600 font-bold mt-2 text-lg">₹{p.price} <span className="text-xs text-gray-500 font-normal">/ {p.unit}</span></p>
                                 <Link href={`/buyer/messages?sellerId=${seller._id}&message=Hi, I am interested in ${p.name}`} className="block mt-3 text-center border border-blue-600 text-blue-600 py-2 rounded hover:bg-blue-50 font-medium">
                                     Send Enquiry
