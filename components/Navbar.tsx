@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, LogOut, LayoutDashboard, Search, PlusCircle, ChevronDown, TrendingUp, MessageCircle } from 'lucide-react';
+import { Menu, X, LogOut, LayoutDashboard, Search, PlusCircle, ChevronDown, TrendingUp, MessageCircle, Megaphone, CheckCircle } from 'lucide-react';
 import PostRequirementModal from '@/components/PostRequirementModal';
 import { industrialProducts } from '@/lib/industrialData';
 
@@ -13,13 +13,13 @@ export default function Navbar() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPostReqOpen, setIsPostReqOpen] = useState(false);
-  
+
   // Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
-  
+
   const [customUser, setCustomUser] = useState<any>(null);
 
   // 1. Fetch Custom Auth Session
@@ -41,9 +41,9 @@ export default function Navbar() {
   // 2. Close Dropdown on Outside Click
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-        if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-            setShowSuggestions(false);
-        }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -58,27 +58,27 @@ export default function Navbar() {
     setSearchQuery(query);
 
     if (query.length > 1) {
-        const allProducts = industrialProducts.flatMap(cat => cat.products);
-        const matches = allProducts
-            .filter(item => item.toLowerCase().includes(query.toLowerCase()))
-            .slice(0, 8);
-        
-        setSuggestions(matches);
-        setShowSuggestions(true);
+      const allProducts = industrialProducts.flatMap(cat => cat.products);
+      const matches = allProducts
+        .filter(item => item.toLowerCase().includes(query.toLowerCase()))
+        .slice(0, 8);
+
+      setSuggestions(matches);
+      setShowSuggestions(true);
     } else {
-        setSuggestions([]);
-        setShowSuggestions(false);
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
   };
 
   const handleSearchSubmit = (e?: React.FormEvent, overrideQuery?: string) => {
     if (e) e.preventDefault();
     const finalQuery = overrideQuery || searchQuery;
-    
+
     if (finalQuery.trim()) {
-        setShowSuggestions(false);
-        router.push(`/search?q=${encodeURIComponent(finalQuery)}`);
-        setIsMobileMenuOpen(false);
+      setShowSuggestions(false);
+      router.push(`/search?q=${encodeURIComponent(finalQuery)}`);
+      setIsMobileMenuOpen(false);
     }
   };
 
@@ -116,7 +116,7 @@ export default function Navbar() {
               <form onSubmit={handleSearchSubmit} className="relative group w-full">
                 <div className="relative flex items-center">
                   <Search className="absolute left-5 text-gray-400 group-hover:text-blue-500 transition-colors" size={22} />
-                  
+
                   <input
                     type="text"
                     placeholder="Search for products, suppliers, or categories..."
@@ -125,7 +125,7 @@ export default function Navbar() {
                     onChange={handleSearchChange}
                     onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
                   />
-                  
+
                   <button
                     type="submit"
                     className="absolute right-1.5 top-1.5 bottom-1.5 px-8 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all duration-200 font-bold text-base shadow-md flex items-center gap-2 hover:shadow-lg active:scale-95"
@@ -138,41 +138,41 @@ export default function Navbar() {
               {/* Suggestions Dropdown */}
               {showSuggestions && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                   {suggestions.length > 0 ? (
-                       <ul>
-                           {suggestions.map((item, index) => (
-                               <li 
-                                   key={index}
-                                   onClick={() => {
-                                       setSearchQuery(item);
-                                       handleSearchSubmit(undefined, item);
-                                   }}
-                                   className="px-6 py-3 hover:bg-blue-50 cursor-pointer flex items-center gap-3 text-gray-700 transition-colors border-b border-gray-50 last:border-0"
-                               >
-                                   <Search size={16} className="text-gray-400" />
-                                   <span dangerouslySetInnerHTML={{
-                                       __html: item.replace(new RegExp(searchQuery, "gi"), (match) => `<span class="font-bold text-blue-600">${match}</span>`)
-                                   }} />
-                               </li>
-                           ))}
-                           <li 
-                                onClick={(e) => handleSearchSubmit(e)}
-                                className="px-6 py-3 bg-gray-50 hover:bg-gray-100 cursor-pointer text-blue-600 font-semibold text-center flex items-center justify-center gap-2"
-                           >
-                               See all results for "{searchQuery}" <TrendingUp size={16}/>
-                           </li>
-                       </ul>
-                   ) : (
-                       <div className="p-6 text-center text-gray-500">
-                           <p>No direct matches found.</p>
-                           <button 
-                                onClick={(e) => handleSearchSubmit(e)}
-                                className="text-blue-600 font-semibold hover:underline mt-2 text-sm"
-                           >
-                               Run Deep Search
-                           </button>
-                       </div>
-                   )}
+                  {suggestions.length > 0 ? (
+                    <ul>
+                      {suggestions.map((item, index) => (
+                        <li
+                          key={index}
+                          onClick={() => {
+                            setSearchQuery(item);
+                            handleSearchSubmit(undefined, item);
+                          }}
+                          className="px-6 py-3 hover:bg-blue-50 cursor-pointer flex items-center gap-3 text-gray-700 transition-colors border-b border-gray-50 last:border-0"
+                        >
+                          <Search size={16} className="text-gray-400" />
+                          <span dangerouslySetInnerHTML={{
+                            __html: item.replace(new RegExp(searchQuery, "gi"), (match) => `<span class="font-bold text-blue-600">${match}</span>`)
+                          }} />
+                        </li>
+                      ))}
+                      <li
+                        onClick={(e) => handleSearchSubmit(e)}
+                        className="px-6 py-3 bg-gray-50 hover:bg-gray-100 cursor-pointer text-blue-600 font-semibold text-center flex items-center justify-center gap-2"
+                      >
+                        See all results for "{searchQuery}" <TrendingUp size={16} />
+                      </li>
+                    </ul>
+                  ) : (
+                    <div className="p-6 text-center text-gray-500">
+                      <p>No direct matches found.</p>
+                      <button
+                        onClick={(e) => handleSearchSubmit(e)}
+                        className="text-blue-600 font-semibold hover:underline mt-2 text-sm"
+                      >
+                        Run Deep Search
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -183,29 +183,29 @@ export default function Navbar() {
               {/* For Buyer Dropdown */}
               <div className="relative group h-16 flex items-center px-2">
                 <button className="flex items-center gap-1 text-gray-600 hover:text-blue-600 font-medium text-sm transition-colors">
-                  For Buyers <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300"/>
+                  For Buyers <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300" />
                 </button>
                 <div className="absolute top-[75%] right-0 w-56 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block p-1.5 transform transition-all origin-top-right animate-in fade-in slide-in-from-top-2 z-50">
                   <button onClick={() => setIsPostReqOpen(true)} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium flex items-center gap-2">
-                    <PlusCircle size={16}/> Post Requirement
+                    <PlusCircle size={16} /> Post Requirement
                   </button>
                   <Link href="/search" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Browse Suppliers
                   </Link>
                   <Link href="/buyer/messages" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium flex items-center gap-2">
-                     <MessageCircle size={16}/> Messages
+                    <MessageCircle size={16} /> Messages
                   </Link>
                   <Link href="/how-it-works" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     How It Works
                   </Link>
-                  
+
                   {/* ADDED: Buyer Logout Button */}
                   {user?.role === 'buyer' && (
-                    <button 
-                      onClick={handleLogout} 
+                    <button
+                      onClick={handleLogout}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors font-medium flex items-center gap-2 border-t border-gray-100 mt-1"
                     >
-                      <LogOut size={16}/> Logout
+                      <LogOut size={16} /> Logout
                     </button>
                   )}
                 </div>
@@ -214,7 +214,7 @@ export default function Navbar() {
               {/* For Seller Dropdown */}
               <div className="relative group h-16 flex items-center px-2">
                 <button className="flex items-center gap-1 text-gray-600 hover:text-blue-600 font-medium text-sm transition-colors">
-                  For Sellers <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300"/>
+                  For Sellers <ChevronDown size={14} className="group-hover:rotate-180 transition-transform duration-300" />
                 </button>
                 <div className="absolute top-[75%] right-0 w-56 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block p-1.5 transform transition-all origin-top-right animate-in fade-in slide-in-from-top-2 z-50">
                   <Link href="/register?role=seller" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
@@ -224,7 +224,7 @@ export default function Navbar() {
                     Seller Login
                   </Link>
                   <Link href="/seller/messages" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium flex items-center gap-2">
-                     <MessageCircle size={16}/> Seller Messages
+                    <MessageCircle size={16} /> Seller Messages
                   </Link>
                   <Link href="/seller/pricing" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors font-medium">
                     Membership Plans
@@ -232,11 +232,11 @@ export default function Navbar() {
 
                   {/* ADDED: Seller Logout Button */}
                   {user?.role === 'seller' && (
-                    <button 
-                      onClick={handleLogout} 
+                    <button
+                      onClick={handleLogout}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors font-medium flex items-center gap-2 border-t border-gray-100 mt-1"
                     >
-                      <LogOut size={16}/> Logout
+                      <LogOut size={16} /> Logout
                     </button>
                   )}
                 </div>
@@ -287,8 +287,8 @@ export default function Navbar() {
 
             {/* 4. MOBILE MENU TOGGLE */}
             <div className="flex items-center md:hidden gap-3">
-              <button 
-                onClick={() => setIsPostReqOpen(true)} 
+              <button
+                onClick={() => setIsPostReqOpen(true)}
                 className="text-red-600 bg-red-50 p-2 rounded-full hover:bg-red-100 transition-colors"
               >
                 <PlusCircle size={24} />
@@ -326,33 +326,58 @@ export default function Navbar() {
               <Link href="/search" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Browse Suppliers</Link>
               <Link href="/buyer/messages" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Messages</Link>
             </div>
-             <div className="border-t border-gray-100 pt-4 space-y-2">
+            <div className="border-t border-gray-100 pt-4 space-y-2">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 mb-1">For Sellers</p>
               <Link href="/register?role=seller" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Sell on YouthBharat</Link>
               <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Seller Login</Link>
               <Link href="/seller/messages" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-xl font-medium transition-colors text-base">Seller Messages</Link>
             </div>
-            
+
             <div className="border-t border-gray-100 pt-6 pb-4 mt-auto">
               {user ? (
                 <div className="grid grid-cols-2 gap-4">
                   <Link href={homeHref} onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 py-3.5 rounded-xl font-bold text-lg">
-                    <LayoutDashboard size={22}/> Dashboard
+                    <LayoutDashboard size={22} /> Dashboard
                   </Link>
                   <button onClick={handleLogout} className="flex items-center justify-center gap-2 bg-red-50 text-red-600 font-bold py-3.5 rounded-xl text-lg">
-                    <LogOut size={22}/> Logout
+                    <LogOut size={22} /> Logout
                   </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4">
-                   <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center bg-gray-100 text-gray-700 py-3.5 rounded-xl font-bold text-lg">Sign In</Link>
-                   <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-md text-lg">Join Free</Link>
+                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center bg-gray-100 text-gray-700 py-3.5 rounded-xl font-bold text-lg">Sign In</Link>
+                  <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-md text-lg">Join Free</Link>
                 </div>
               )}
             </div>
           </div>
         )}
       </nav>
+
+      {/* --- NEW POST REQUIREMENT BANNER --- */}
+      <div
+        onClick={() => setIsPostReqOpen(true)}
+        className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors"
+      >
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-100 p-2 rounded-full hidden sm:block">
+              <Megaphone className="text-blue-600" size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-800 flex items-center justify-center sm:justify-start gap-1.5">
+                Tell us what you need! <span className="hidden sm:inline">-</span> <span className="font-normal text-gray-600">Get quotes from verified sellers.</span>
+              </p>
+              <p className="text-xs text-blue-600 mt-0.5 flex items-center justify-center sm:justify-start gap-1">
+                <CheckCircle size={12} /> Verified Sellers • Fast Response • Best Prices
+              </p>
+            </div>
+          </div>
+          <button className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow-sm flex items-center gap-2 transition-all">
+            Post Requirement <TrendingUp size={14} />
+          </button>
+        </div>
+      </div>
 
       <PostRequirementModal isOpen={isPostReqOpen} onClose={() => setIsPostReqOpen(false)} />
     </>
