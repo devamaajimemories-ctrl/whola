@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
-    Send, ArrowLeft, MoreVertical, Phone, Search,
-    ShieldCheck, Loader2, MessageSquare, User, Paperclip, Smile, Check, X, CheckCircle
+    Send, ArrowLeft, Loader2, User, Check, X, CheckCircle
 } from 'lucide-react';
 
 interface Conversation {
@@ -180,9 +179,10 @@ function BuyerChatInterface() {
     const handleBack = () => { setActiveSellerId(null); router.push('/buyer/messages'); };
 
     return (
-        <div className="flex h-[calc(100vh-64px)] bg-[#e5ddd5] font-sans">
-            <aside className={`w-full md:w-[350px] lg:w-[400px] bg-white border-r border-[#d1d7db] flex flex-col z-20 ${activeSellerId ? 'hidden md:flex' : 'flex'}`}>
-                <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center gap-2 border-b border-[#d1d7db]">
+        <div className="flex h-[calc(100vh-64px)] bg-[#e5ddd5] font-sans overflow-hidden">
+            {/* Sidebar: Left on Desktop, Full screen on Mobile if no chat selected */}
+            <aside className={`w-full md:w-[350px] lg:w-[400px] bg-white border-r border-[#d1d7db] flex flex-col z-20 h-full ${activeSellerId ? 'hidden md:flex' : 'flex'}`}>
+                <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center gap-2 border-b border-[#d1d7db] flex-shrink-0">
                     <User size={20} className="text-gray-500" />
                     <span className="font-bold text-gray-700">Suppliers</span>
                 </div>
@@ -201,10 +201,11 @@ function BuyerChatInterface() {
                 </div>
             </aside>
 
-            <main className={`flex-1 flex flex-col relative bg-[#efeae2] ${!activeSellerId ? 'hidden md:flex' : 'flex'}`}>
+            {/* Main Chat Area */}
+            <main className={`flex-1 flex flex-col relative bg-[#efeae2] h-full ${!activeSellerId ? 'hidden md:flex' : 'flex'}`}>
                 {activeSellerId ? (
                     <>
-                        <header className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between border-b z-10 shadow-sm">
+                        <header className="h-[60px] bg-[#f0f2f5] px-4 flex items-center justify-between border-b z-10 shadow-sm flex-shrink-0">
                             <div className="flex items-center gap-3">
                                 <button onClick={handleBack} className="md:hidden"><ArrowLeft size={24}/></button>
                                 <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center font-bold text-gray-600">{activeName.charAt(0)}</div>
@@ -215,7 +216,6 @@ function BuyerChatInterface() {
                         <div className="flex-1 overflow-y-auto p-4 md:px-16" ref={scrollRef} style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')", backgroundBlendMode: 'overlay' }}>
                             {messages.map((msg) => (
                                 <div key={msg._id} className={`flex mb-2 ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    {/* FORCE TEXT BLACK */}
                                     <div className={`relative max-w-[85%] rounded-lg px-3 py-2 shadow-sm text-sm text-black ${msg.sender === 'user' ? 'bg-[#d9fdd3]' : 'bg-white'}`}>
                                         
                                         {msg.type === 'OFFER' && (
@@ -242,46 +242,53 @@ function BuyerChatInterface() {
                             ))}
                         </div>
 
-                        {/* ACTION BAR: Approve & Pay + Task Completed */}
-                        <div className="bg-[#f0f2f5] px-4 pt-2 flex flex-col gap-2 border-t border-gray-200">
-                            {showDealInput && (
-                                <div className="p-3 bg-white border border-gray-200 rounded-lg animate-in slide-in-from-bottom-2 shadow-sm">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-xs font-bold text-gray-500">APPROVE AMOUNT</span>
-                                        <button onClick={() => setShowDealInput(false)}><X size={16} className="text-gray-400"/></button>
+                        {/* === FIXED BOTTOM SECTION === */}
+                        <div className="flex-shrink-0 bg-[#f0f2f5] z-10 border-t border-gray-200 w-full">
+                            
+                            {/* 1. Action Buttons (Task Completed & Approve) - Separate Row */}
+                            <div className="px-4 py-2 w-full">
+                                {showDealInput && (
+                                    <div className="p-3 mb-2 bg-white border border-gray-200 rounded-lg animate-in slide-in-from-bottom-2 shadow-sm">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-bold text-gray-500">APPROVE AMOUNT</span>
+                                            <button onClick={() => setShowDealInput(false)}><X size={16} className="text-gray-400"/></button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input type="number" placeholder="Enter Amount (₹)" className="flex-1 border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none text-black" value={dealAmount} onChange={(e) => setDealAmount(e.target.value)} />
+                                            <button onClick={handleProposeDeal} className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700">Send</button>
+                                        </div>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <input type="number" placeholder="Enter Amount (₹)" className="flex-1 border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 outline-none text-black" value={dealAmount} onChange={(e) => setDealAmount(e.target.value)} />
-                                        <button onClick={handleProposeDeal} className="bg-green-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-green-700">Send</button>
-                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between gap-2">
+                                    <button onClick={() => setShowDealInput(!showDealInput)} className="flex-1 bg-white border border-gray-300 text-green-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-green-50 shadow-sm flex items-center justify-center gap-1 transition-colors whitespace-nowrap">
+                                        <CheckCircle size={14}/> Approve & Pay
+                                    </button>
+
+                                    <button 
+                                        onClick={handleTaskCompleted}
+                                        className={`flex-1 border text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center justify-center gap-1 transition-all whitespace-nowrap ${
+                                            activeOrder 
+                                            ? 'bg-green-600 border-green-700 hover:bg-green-700 animate-pulse cursor-pointer' 
+                                            : 'bg-gray-400 border-gray-500 opacity-90 cursor-not-allowed'
+                                        }`}
+                                        title={activeOrder ? "Mark order as received to release payment" : "Pay for an order first to enable this"}
+                                    >
+                                        {completingTask ? <Loader2 size={14} className="animate-spin"/> : <Check size={14} />} 
+                                        Task Completed
+                                    </button>
                                 </div>
-                            )}
+                            </div>
 
-                            <div className="flex items-center justify-between gap-2 pb-1">
-                                <button onClick={() => setShowDealInput(!showDealInput)} className="flex-1 bg-white border border-gray-300 text-green-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-green-50 shadow-sm flex items-center justify-center gap-1">
-                                    <CheckCircle size={14}/> Approve & Pay
-                                </button>
-
-                                <button 
-                                    onClick={handleTaskCompleted}
-                                    className={`flex-1 border text-white px-3 py-2 rounded-lg text-xs font-bold shadow-sm flex items-center justify-center gap-1 transition-all ${
-                                        activeOrder 
-                                        ? 'bg-green-600 border-green-700 hover:bg-green-700 animate-pulse' 
-                                        : 'bg-gray-400 border-gray-500 opacity-90'
-                                    }`}
-                                >
-                                    {completingTask ? <Loader2 size={14} className="animate-spin"/> : <Check size={14} />} 
-                                    Task Completed
-                                </button>
+                            {/* 2. Message Input - Separate Row */}
+                            <div className="px-4 pb-3 flex items-center gap-3 w-full">
+                                <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2 border border-gray-300">
+                                    <input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message" className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-0 text-black placeholder:text-gray-500" />
+                                </div>
+                                <button onClick={handleSend} disabled={!input.trim()} className="text-[#54656f] hover:text-green-600 p-2 bg-white rounded-full border border-gray-300 hover:bg-gray-50 transition"><Send size={20} /></button>
                             </div>
                         </div>
 
-                        <footer className="bg-[#f0f2f5] min-h-[60px] px-4 py-2 flex items-center gap-3 z-10">
-                            <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2">
-                                <input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message" className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-0 text-black placeholder:text-gray-500" />
-                            </div>
-                            <button onClick={handleSend} disabled={!input.trim()} className="text-[#54656f] hover:text-green-600"><Send size={24} /></button>
-                        </footer>
                     </>
                 ) : (
                     <div className="hidden md:flex flex-col items-center justify-center h-full text-gray-500">Select a chat</div>

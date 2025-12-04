@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Send, ArrowLeft, Loader2, User, Check, X } from 'lucide-react';
+import { Send, ArrowLeft, Loader2, User, CheckCircle, X } from 'lucide-react';
 
 interface Message {
     _id: string;
@@ -107,8 +107,9 @@ function SellerChatInterface() {
 
     return (
         <div className="flex h-[calc(100vh-64px)] bg-[#e5ddd5] overflow-hidden font-sans">
-            <aside className={`w-full md:w-[350px] lg:w-[400px] bg-white border-r border-[#d1d7db] flex flex-col z-20 ${activeBuyerId ? 'hidden md:flex' : 'flex'}`}>
-                <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center gap-2 border-b">
+            {/* Sidebar */}
+            <aside className={`w-full md:w-[350px] lg:w-[400px] bg-white border-r border-[#d1d7db] flex flex-col z-20 h-full ${activeBuyerId ? 'hidden md:flex' : 'flex'}`}>
+                <div className="h-[60px] bg-[#f0f2f5] px-4 flex items-center gap-2 border-b flex-shrink-0">
                     <User size={20} className="text-gray-500" /> <span className="font-bold text-gray-700">Inbox</span>
                 </div>
                 <div className="flex-1 overflow-y-auto">
@@ -121,10 +122,11 @@ function SellerChatInterface() {
                 </div>
             </aside>
 
-            <main className={`flex-1 flex flex-col relative bg-[#efeae2] ${!activeBuyerId ? 'hidden md:flex' : 'flex'}`}>
+            {/* Main Chat Area */}
+            <main className={`flex-1 flex flex-col relative bg-[#efeae2] h-full ${!activeBuyerId ? 'hidden md:flex' : 'flex'}`}>
                 {activeBuyerId ? (
                     <>
-                        <header className="h-[60px] bg-[#f0f2f5] px-4 flex items-center gap-3 border-b z-10">
+                        <header className="h-[60px] bg-[#f0f2f5] px-4 flex items-center gap-3 border-b z-10 flex-shrink-0">
                             <button onClick={() => {setActiveBuyerId(null); router.push('/seller/messages');}} className="md:hidden"><ArrowLeft size={24}/></button>
                             <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center font-bold text-blue-600">{tempBuyerName.charAt(0)}</div>
                             <h2 className="font-medium text-black">{tempBuyerName}</h2>
@@ -133,7 +135,6 @@ function SellerChatInterface() {
                         <div className="flex-1 overflow-y-auto p-4 md:px-16" ref={scrollRef} style={{ backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')", backgroundBlendMode: 'overlay' }}>
                             {messages.map((msg) => (
                                 <div key={msg._id} className={`flex mb-2 ${msg.sender === 'seller' ? 'justify-end' : 'justify-start'}`}>
-                                    {/* FORCE TEXT BLACK */}
                                     <div className={`relative max-w-[85%] rounded-lg px-3 py-2 shadow-sm text-sm text-black ${msg.sender === 'seller' ? 'bg-[#d9fdd3] text-black' : 'bg-white text-black'}`}>
                                         
                                         {msg.type === 'OFFER' && (
@@ -154,26 +155,40 @@ function SellerChatInterface() {
                             ))}
                         </div>
 
-                        {showDealInput && (
-                            <div className="p-3 bg-white border-t border-gray-200 animate-in slide-in-from-bottom-2">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-xs font-bold text-gray-500">ACCEPT AMOUNT</span>
-                                    <button onClick={() => setShowDealInput(false)}><X size={16} className="text-gray-400"/></button>
-                                </div>
-                                <div className="flex gap-2">
-                                    <input type="number" placeholder="Enter Amount (₹)" className="flex-1 border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-black" value={dealAmount} onChange={(e) => setDealAmount(e.target.value)} />
-                                    <button onClick={handleAcceptDeal} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-blue-700">Send</button>
-                                </div>
-                            </div>
-                        )}
+                        {/* === FIXED BOTTOM SECTION === */}
+                        <div className="flex-shrink-0 bg-[#f0f2f5] z-10 border-t border-gray-200 w-full">
+                            
+                            {/* 1. Action Buttons (Accept Deal) */}
+                            <div className="px-4 py-2 w-full">
+                                {showDealInput && (
+                                    <div className="p-3 mb-2 bg-white border border-gray-200 rounded-lg animate-in slide-in-from-bottom-2 shadow-sm">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-bold text-gray-500">ACCEPT AMOUNT</span>
+                                            <button onClick={() => setShowDealInput(false)}><X size={16} className="text-gray-400"/></button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <input type="number" placeholder="Enter Amount (₹)" className="flex-1 border rounded px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-black" value={dealAmount} onChange={(e) => setDealAmount(e.target.value)} />
+                                            <button onClick={handleAcceptDeal} className="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-blue-700">Send</button>
+                                        </div>
+                                    </div>
+                                )}
 
-                        <footer className="bg-[#f0f2f5] min-h-[62px] px-4 py-2 flex items-center gap-3 z-10">
-                            <button onClick={() => setShowDealInput(!showDealInput)} className="bg-white border border-gray-300 text-blue-700 px-3 py-2 rounded-full text-xs font-bold hover:bg-blue-50 shadow-sm whitespace-nowrap">Accept Deal</button>
-                            <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2">
-                                <input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message" className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-0 text-black placeholder:text-gray-500" />
+                                <div className="flex items-center justify-between gap-2 pb-1">
+                                    <button onClick={() => setShowDealInput(!showDealInput)} className="w-full bg-white border border-gray-300 text-blue-700 px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-50 shadow-sm flex items-center justify-center gap-1 transition-colors">
+                                        <CheckCircle size={14}/> Accept Deal
+                                    </button>
+                                </div>
                             </div>
-                            <button onClick={handleSend} disabled={!input.trim()} className="text-[#54656f] hover:text-blue-600"><Send size={24} /></button>
-                        </footer>
+
+                            {/* 2. Message Input */}
+                            <div className="px-4 pb-3 flex items-center gap-3 w-full">
+                                <div className="flex-1 bg-white rounded-lg flex items-center px-4 py-2 border border-gray-300">
+                                    <input value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleSend()} placeholder="Type a message" className="w-full bg-transparent border-none focus:ring-0 text-[15px] p-0 text-black placeholder:text-gray-500" />
+                                </div>
+                                <button onClick={handleSend} disabled={!input.trim()} className="text-[#54656f] hover:text-blue-600 p-2 bg-white rounded-full border border-gray-300 hover:bg-gray-50 transition"><Send size={20} /></button>
+                            </div>
+                        </div>
+
                     </>
                 ) : (
                     <div className="hidden md:flex flex-col items-center justify-center h-full text-gray-500">Select a chat</div>
