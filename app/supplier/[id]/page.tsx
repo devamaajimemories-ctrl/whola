@@ -3,18 +3,16 @@ import { notFound } from 'next/navigation';
 import dbConnect from '@/lib/db';
 import Seller from '@/lib/models/Seller';
 import Product from '@/lib/models/Product';
-import { MapPin, ShieldCheck, Calendar, Package } from 'lucide-react';
+import { MapPin, ShieldCheck, Calendar, Package, Lock, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 
-// Metadata Generator for dynamic titles
 export async function generateMetadata({ params }: { params: { id: string } }) {
     await dbConnect();
     const seller = await Seller.findById(params.id);
     if (!seller) return { title: 'Supplier Not Found' };
-
     return {
         title: `${seller.name} - ${seller.category} Manufacturer in ${seller.city}`,
-        description: `Contact ${seller.name} in ${seller.city} for bulk ${seller.category} deals. Verified Supplier on YouthBharat.`
+        description: `Contact ${seller.name} in ${seller.city} for bulk ${seller.category} deals.`
     };
 }
 
@@ -25,36 +23,8 @@ export default async function PublicSupplierProfile({ params }: { params: { id: 
 
     if (!seller) return notFound();
 
-    // Organization Schema with AggregateRating (Review Schema)
-    const jsonLd = {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "name": seller.name,
-        "url": `https://youthbharat.com/supplier/${seller._id}`,
-        "logo": "https://youthbharat.com/logo.png",
-        "contactPoint": {
-            "@type": "ContactPoint",
-            "contactType": "sales",
-            "areaServed": "IN"
-        },
-        "address": {
-            "@type": "PostalAddress",
-            "addressLocality": seller.city,
-            "addressCountry": "IN"
-        },
-        "aggregateRating": {
-            "@type": "AggregateRating",
-            "ratingValue": seller.ratingAverage || "4.5",
-            "reviewCount": seller.ratingCount || "10",
-            "bestRating": "5",
-            "worstRating": "1"
-        }
-    };
-
     return (
         <div className="bg-gray-50 min-h-screen pb-12">
-            <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-
             {/* Banner */}
             <div className="h-48 bg-gradient-to-r from-blue-900 to-indigo-900"></div>
 
@@ -78,12 +48,42 @@ export default async function PublicSupplierProfile({ params }: { params: { id: 
                                 <Calendar size={16} /> Member since {new Date((seller as any).createdAt).getFullYear()}
                             </span>
                         </div>
+                        
+                        {/* PII BLUR BOX */}
+                        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 max-w-md">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-yellow-100 p-2 rounded-full text-yellow-700">
+                                    <Lock size={20} />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500 font-medium">Phone Number</p>
+                                    <p className="text-lg font-bold text-gray-800 tracking-widest blur-[4px] select-none">
+                                        +91 98765 43210
+                                    </p>
+                                </div>
+                                <div className="ml-auto">
+                                    <Link 
+                                        href={`/buyer/messages?sellerId=${seller._id}&message=Hi, I want to discuss a deal.`}
+                                        className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded font-bold hover:bg-blue-700"
+                                    >
+                                        Reveal in Chat
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="w-full md:w-auto flex flex-col gap-3">
-                        <button className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg">
+                        <Link 
+                            href={`/buyer/messages?sellerId=${seller._id}`}
+                            className="bg-blue-600 text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg flex items-center justify-center gap-2"
+                        >
+                            <MessageCircle size={20} />
                             Contact Supplier
-                        </button>
+                        </Link>
+                        <p className="text-xs text-gray-500 text-center max-w-[200px]">
+                            Secure payments & communications protected by YouthBharat Escrow.
+                        </p>
                     </div>
                 </div>
 
@@ -96,17 +96,15 @@ export default async function PublicSupplierProfile({ params }: { params: { id: 
                     {products.length > 0 ? products.map((p: any) => (
                         <div key={p._id} className="bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all group">
                             <div className="h-48 bg-gray-100 flex items-center justify-center">
-                                {/* Placeholder logic - Replace with actual image rendering if available */}
-                                {p.images && p.images.length > 0 ? (
-                                    <img src={p.images[0]} alt={p.name} className="h-full w-full object-cover" />
-                                ) : (
-                                    <Package size={48} className="text-gray-300" />
-                                )}
+                                <Package size={48} className="text-gray-300" />
                             </div>
                             <div className="p-4">
                                 <h3 className="font-bold text-gray-800 group-hover:text-blue-600 transition-colors line-clamp-1">{p.name}</h3>
-                                <p className="text-blue-600 font-bold mt-2 text-lg">₹{p.price} <span className="text-xs text-gray-500 font-normal">/ {p.unit}</span></p>
-                                <Link href={`/buyer/messages?sellerId=${seller._id}&message=Hi, I am interested in ${p.name}`} className="block mt-3 text-center border border-blue-600 text-blue-600 py-2 rounded hover:bg-blue-50 font-medium">
+                                <p className="text-blue-600 font-bold mt-2 text-lg">₹{p.price}</p>
+                                <Link 
+                                    href={`/buyer/messages?sellerId=${seller._id}&message=Inquiry for ${p.name}`} 
+                                    className="block mt-3 text-center border border-blue-600 text-blue-600 py-2 rounded hover:bg-blue-50 font-medium"
+                                >
                                     Send Enquiry
                                 </Link>
                             </div>

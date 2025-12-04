@@ -40,6 +40,10 @@ export interface ISeller extends Document {
     bankIFSC?: string;
     bankAccountHolderName?: string;
     bankVerified?: boolean;
+
+    // Timestamps
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const SellerSchema: Schema = new Schema({
