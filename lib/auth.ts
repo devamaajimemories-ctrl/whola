@@ -8,11 +8,12 @@ if (!process.env.JWT_SECRET) {
 
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET);
 
-export async function signToken(payload: any) {
+// Added expiresIn parameter with default '30d'
+export async function signToken(payload: any, expiresIn: string = '30d') {
     return await new SignJWT(payload)
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
-        .setExpirationTime('30d') // Session lasts 30 days
+        .setExpirationTime(expiresIn) 
         .sign(SECRET_KEY);
 }
 
@@ -25,13 +26,20 @@ export async function verifyToken(token: string) {
     }
 }
 
-export function createAuthCookie(response: NextResponse, token: string) {
-    response.cookies.set('auth_token', token, {
+// Added isSession parameter
+export function createAuthCookie(response: NextResponse, token: string, isSession: boolean = false) {
+    const options: any = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30, // 30 Days
         path: '/',
-    });
+    };
+
+    // Only set maxAge if it's NOT a session cookie
+    if (!isSession) {
+        options.maxAge = 60 * 60 * 24 * 30; // 30 Days
+    }
+
+    response.cookies.set('auth_token', token, options);
     return response;
 }

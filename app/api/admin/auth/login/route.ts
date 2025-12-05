@@ -19,15 +19,18 @@ export async function POST(req: Request) {
 
         // 3. Generate Admin Token (Role: 'admin')
         // We use a static ID 'admin-user' since there's only one super admin
+        // EXPIRATION: Set to 12 hours for security (instead of 30 days)
         const token = await signToken({
             userId: 'admin-master',
             role: 'admin',
             name: 'Super Admin'
-        });
+        }, '12h'); 
 
         // 4. Set Cookie & Respond
         const response = NextResponse.json({ success: true, message: "Admin Authenticated" });
-        return createAuthCookie(response, token);
+        
+        // COOKIE: Enable isSession=true so it deletes when browser closes
+        return createAuthCookie(response, token, true);
 
     } catch (error) {
         console.error("Admin Login Error:", error);
