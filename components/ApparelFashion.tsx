@@ -65,14 +65,14 @@ const ApparelFashion = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
                             <div className="space-y-2 mb-6">
-                                <Link href="#" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Badges, Emblems & Lanyards</Link>
-                                <Link href="#" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Designer & Fashion Bags</Link>
-                                <Link href="#" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Bags, Pouches, Card Holder</Link>
-                                <Link href="#" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Sarees & Lehenga</Link>
+                                <Link href="/search?q=Badges%2C%20Emblems%20%26%20Lanyards" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Badges, Emblems & Lanyards</Link>
+                                <Link href="/search?q=Designer%20%26%20Fashion%20Bags" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Designer & Fashion Bags</Link>
+                                <Link href="/search?q=Bags%2C%20Pouches%2C%20Card%20Holder" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Bags, Pouches, Card Holder</Link>
+                                <Link href="/search?q=Sarees%20%26%20Lehenga" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Sarees & Lehenga</Link>
                             </div>
-                            <button className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-full w-fit transition-colors shadow-md">
+                            <Link href="/category/apparel-fashion" className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-full w-fit transition-colors shadow-md inline-block">
                                 View All
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -91,7 +91,7 @@ const ApparelFashion = () => {
                                     <ul className="space-y-1.5 text-sm">
                                         {cat.items.map((item, i) => (
                                             <li key={i}>
-                                                <Link href="#" className="text-gray-500 hover:text-blue-600 transition-colors block">
+                                                <Link href={`/search?q=${encodeURIComponent(item)}`} className="text-gray-500 hover:text-blue-600 transition-colors block">
                                                     {item}
                                                 </Link>
                                             </li>

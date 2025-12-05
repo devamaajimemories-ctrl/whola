@@ -58,9 +58,9 @@ const HomeSupplies = () => {
                     <h2 className="text-2xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">
                         Home Supplies
                     </h2>
-                    <button className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-full w-fit transition-colors shadow-md">
+                    <Link href="/category/home-supplies" className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-6 rounded-full w-fit transition-colors shadow-md">
                         View All
-                    </button>
+                    </Link>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-6">
@@ -74,14 +74,14 @@ const HomeSupplies = () => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex flex-col justify-end p-6">
                             <div className="space-y-2 mb-6">
-                                <Link href="#" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Kitchenware</Link>
-                                <Link href="#" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Cleaning Supplies</Link>
-                                <Link href="#" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Baby Care</Link>
-                                <Link href="#" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Home Decor</Link>
+                                <Link href="/search?q=Kitchenware" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Kitchenware</Link>
+                                <Link href="/search?q=Cleaning%20Supplies" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Cleaning Supplies</Link>
+                                <Link href="/search?q=Baby%20Care" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Baby Care</Link>
+                                <Link href="/search?q=Home%20Decor" className="block text-white/90 hover:text-white hover:translate-x-1 transition-transform">Home Decor</Link>
                             </div>
-                            <button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/50 font-medium py-2 px-4 rounded-lg transition-all">
+                            <Link href="/category/home-supplies" className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border border-white/50 font-medium py-2 px-4 rounded-lg transition-all inline-block">
                                 Explore Now
-                            </button>
+                            </Link>
                         </div>
                     </div>
 
@@ -100,13 +100,15 @@ const HomeSupplies = () => {
                                     <ul className="space-y-1.5 text-sm">
                                         {cat.items.map((item, i) => (
                                             <li key={i}>
-                                                <Link href="#" className="text-gray-500 hover:text-blue-600 transition-colors block">
+                                                <Link href={`/search?q=${encodeURIComponent(item)}`} className="text-gray-500 hover:text-blue-600 transition-colors block">
                                                     {item}
                                                 </Link>
                                             </li>
                                         ))}
                                         <li className="text-blue-600 text-xs font-medium cursor-pointer hover:underline mt-1">
-                                            View More
+                                            <Link href={`/search?q=${encodeURIComponent(cat.title.replace(/\.\.\./, ''))}`}>
+                                                View More
+                                            </Link>
                                         </li>
                                     </ul>
                                     <div className={`w-16 h-16 rounded-lg flex items-center justify-center flex-shrink-0 ${cat.color}`}>

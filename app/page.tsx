@@ -5,6 +5,7 @@ import TrendingCategories from "@/components/TrendingCategories";
 import ApparelFashion from "@/components/ApparelFashion";
 import ConsumerElectronics from "@/components/ConsumerElectronics";
 import HomeSupplies from "@/components/HomeSupplies";
+import CosmeticsPersonalCare from "@/components/CosmeticsPersonalCare";
 
 export default function Home() {
   return (
@@ -25,6 +26,7 @@ export default function Home() {
       <ConsumerElectronics />
       <AdPlaceholder />
       <HomeSupplies />
+      <CosmeticsPersonalCare />
     </main>
   );
 }
