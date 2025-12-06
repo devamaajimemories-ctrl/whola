@@ -48,12 +48,16 @@ export async function POST(req: Request) {
         // 3. Handle Buyer ID (Phone vs MongoID)
         let targetUserId = buyerId;
         let buyerPhone = "";
-        const isPhone = /^\d+$/.test(buyerId); 
+        
+        // Check if buyerId is likely a phone number (10 digits)
+        const isPhoneId = /^\d{10}$/.test(buyerId); 
 
-        if (isPhone) {
-            // Buyer ID is a phone number (Guest/Legacy)
+        if (isPhoneId) {
+            // Buyer ID is a phone number (Legacy/Guest)
             buyerPhone = buyerId;
             let user = await User.findOne({ phone: buyerId });
+            
+            // Create user if not exists
             if (!user) {
                 user = await User.create({
                     name: buyerName || "Guest Buyer",
@@ -63,6 +67,14 @@ export async function POST(req: Request) {
                 });
             }
             targetUserId = user._id.toString();
+
+            // --- CRITICAL FIX: MIGRATE OLD CHATS ---
+            // If we have chats under the phone number, move them to the UserID
+            await Chat.updateMany(
+                { sellerId: sellerId, userId: buyerId },
+                { $set: { userId: targetUserId } }
+            );
+
         } else {
             // Buyer ID is MongoID (Registered User)
             const user = await User.findById(buyerId);
@@ -72,14 +84,14 @@ export async function POST(req: Request) {
         // 4. Create New Chat Message
         const chat = await Chat.create({
             sellerId: sellerId,
-            userId: targetUserId,
+            userId: targetUserId, // Always use MongoID now
             sender: 'seller',
             message: message,
             type: 'TEXT',
             isBlocked: false,
         });
 
-        // 5. [NEW] Notify Buyer via WhatsApp
+        // 5. Notify Buyer via WhatsApp
         if (buyerPhone) {
             notifyBuyer(buyerPhone, seller.name, message);
         }

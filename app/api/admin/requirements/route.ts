@@ -68,13 +68,13 @@ export async function POST(req: Request) {
                         if (data.phone) {
                             let manualSeller = await Seller.findOne({ phone: data.phone });
                             if (!manualSeller) {
-                                // FIX: Cast result to 'any' to solve "Type X[] is not assignable to Type X" error
+                                // FIX: Cast result to 'any'
                                 manualSeller = (await Seller.create({
                                     name: data.name || 'Merchant',
                                     phone: data.phone,
-                                    email: `${data.phone}@temp.whola.in`, // Required
-                                    city: 'Manual Lead',                 // Required
-                                    category: 'Manual Lead',             // Required
+                                    email: `${data.phone}@temp.whola.in`, 
+                                    city: 'Manual Lead',                 
+                                    category: 'Manual Lead',             
                                     isVerified: true,
                                     tags: ['Manual Lead']
                                 } as any)) as any;
@@ -87,9 +87,19 @@ export async function POST(req: Request) {
 
             if (!targetSellers.length) return NextResponse.json({ success: false, error: "No sellers found" });
 
-            // 2. GET BUYER ID (Required for Chat System)
-            const buyerUser = await User.findOne({ phone: request.buyerPhone });
-            const buyerId = buyerUser ? buyerUser._id.toString() : request.buyerPhone; 
+            // 2. GET OR CREATE BUYER ID (CRITICAL FIX)
+            // Always ensure we have a valid MongoID for the buyer, even if they are a guest.
+            // This prevents the chat mismatch issue later.
+            let buyerUser = await User.findOne({ phone: request.buyerPhone });
+            if (!buyerUser) {
+                buyerUser = await User.create({
+                    name: request.buyerName,
+                    phone: request.buyerPhone,
+                    role: 'buyer',
+                    email: `guest-${request.buyerPhone}@temp.whola.in` 
+                });
+            }
+            const buyerId = buyerUser._id.toString(); 
 
             // 3. EXECUTE SIMULTANEOUS CONNECTION LOOP
             const processPromises = targetSellers.map(async (seller) => {
@@ -106,13 +116,14 @@ ${request.description ? `📝 Description: ${request.description}` : ''}`;
                 const sellerSystemMsg = `✅ SYSTEM: I am ready to supply this item. Let's discuss details.`;
 
                 // --- B. CREATE CHAT IN DATABASE ---
+                // We check for existing chat to avoid duplicates
                 const existingChat = await Chat.findOne({ sellerId: seller._id, userId: buyerId, message: buyerSystemMsg });
 
                 if (!existingChat) {
                     // 1. Create Buyer's Message
                     await Chat.create({
                         sellerId: seller._id,
-                        userId: buyerId,
+                        userId: buyerId, // Using the correct MongoID
                         sender: 'user', 
                         message: buyerSystemMsg,
                         type: 'TEXT',
@@ -122,7 +133,7 @@ ${request.description ? `📝 Description: ${request.description}` : ''}`;
                     // 2. Create Seller's Auto-Reply
                     await Chat.create({
                         sellerId: seller._id,
-                        userId: buyerId,
+                        userId: buyerId, // Using the correct MongoID
                         sender: 'seller', 
                         message: sellerSystemMsg,
                         type: 'TEXT',
@@ -130,6 +141,7 @@ ${request.description ? `📝 Description: ${request.description}` : ''}`;
                     } as any);
 
                     // --- C. NOTIFY SELLER (WhatsApp) ---
+                    // Link now uses the MongoID
                     const sellerLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/messages?buyerId=${buyerId}`;
                     const sellerWhatsapp = `🚀 *New Lead Assigned!*
                     
