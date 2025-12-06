@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
+import mongoose from 'mongoose'; // Required for ID validation
 import dbConnect from '@/lib/db';
 import Chat from '@/lib/models/Chat';
 import User from '@/lib/models/User';
@@ -11,43 +12,60 @@ export async function GET(request: NextRequest) {
 
         // Get Seller ID from headers (Authenticated)
         const headersList = await headers();
-        const sellerId = headersList.get('x-user-id'); // Assuming seller uses same auth
+        const sellerId = headersList.get('x-user-id');
 
         if (!sellerId) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
         }
 
-        // Find all unique buyers who messaged this seller
+        // 1. Aggregate: Group messages by Buyer (userId)
         const chats = await Chat.aggregate([
             { $match: { sellerId: sellerId } },
-            { $sort: { createdAt: -1 } },
+            { $sort: { createdAt: -1 } }, // Sort messages to get the latest one first
             {
                 $group: {
                     _id: "$userId",
                     lastMessage: { $first: "$message" },
                     lastDate: { $first: "$createdAt" }
                 }
-            }
+            },
+            { $sort: { lastDate: -1 } } // Sort conversations by newest activity
         ]);
 
-        // Fetch buyer names (NO phone/email for PII protection)
+        // 2. Populate Names Safely (Fix for "Blank List" crash)
         const conversations = await Promise.all(
             chats.map(async (chat) => {
-                let name = "Anonymous Buyer";
-                let user = await User.findById(chat._id).select('name');
+                let name = "Guest User"; // Default Name
+                const userId = chat._id;
 
-                if (user) {
-                    name = user.name;
-                } else {
-                    // Fallback: Check if it's a Seller (B2B)
-                    const sellerBuyer = await Seller.findById(chat._id).select('name');
-                    if (sellerBuyer) {
-                        name = sellerBuyer.name;
+                // Check if ID is a valid MongoDB ObjectId (Prevents CastError)
+                if (mongoose.isValidObjectId(userId)) {
+                    // Try finding as a Registered Buyer
+                    const user = await User.findById(userId).select('name');
+                    if (user) {
+                        name = user.name;
+                    } else {
+                        // Fallback: Check if it's another Seller (B2B)
+                        const sellerBuyer = await Seller.findById(userId).select('name');
+                        if (sellerBuyer) {
+                            name = sellerBuyer.name;
+                        }
                     }
+                } 
+                // Handle Special Cases (Legacy or Guest IDs)
+                else if (userId === 'guest') {
+                    name = "Guest User";
+                }
+                else if (userId && userId.toString().startsWith('csv_')) {
+                    name = "Imported Lead";
+                }
+                else {
+                    // If it's a phone number or raw string
+                    name = userId || "Unknown Buyer"; 
                 }
 
                 return {
-                    _id: chat._id,
+                    _id: userId,
                     lastMessage: chat.lastMessage,
                     lastDate: chat.lastDate,
                     buyer: {

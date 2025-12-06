@@ -14,7 +14,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isPostReqOpen, setIsPostReqOpen] = useState(false);
 
-  // Search State - Added Types
+  // Search State
   const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -38,7 +38,7 @@ export default function Navbar() {
     fetchUser();
   }, []);
 
-  // 2. Close Dropdown on Outside Click (FIXED TYPE ERROR HERE)
+  // 2. Close Dropdown on Outside Click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -65,7 +65,7 @@ export default function Navbar() {
     ? (user.role === 'seller' ? '/seller/dashboard' : '/buyer/dashboard') 
     : '/login';
 
-  // 3. Autocomplete Logic - Added Types
+  // 3. Autocomplete Logic
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -188,11 +188,11 @@ export default function Navbar() {
                   <Link href="/how-it-works" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 rounded-lg flex items-center gap-2">
                     <HelpCircle size={16} /> How It Works
                   </Link>
-                  {user?.role === 'buyer' && (
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 border-t border-gray-100 mt-1">
-                      <LogOut size={16} /> Logout
-                    </button>
-                  )}
+
+                  {/* UPDATED: Buyer Logout Button - ALWAYS VISIBLE */}
+                  <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 border-t border-gray-100 mt-1">
+                    <LogOut size={16} /> Logout
+                  </button>
                 </div>
               </div>
 
@@ -208,17 +208,22 @@ export default function Navbar() {
                     <LayoutDashboard size={16} /> Dashboard
                   </Link>
 
-                  <Link href="/seller/messages" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 rounded-lg flex items-center gap-2">
-                    <MessageCircle size={16} /> Seller Messages
+                  {/* Seller Messages with Red Dot */}
+                  <Link href="/seller/messages" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 rounded-lg flex items-center justify-between group">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle size={16} /> Seller Messages
+                    </div>
+                    <span className="h-2 w-2 rounded-full bg-red-500"></span> 
                   </Link>
+
                   <Link href="/how-it-works" className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 rounded-lg flex items-center gap-2">
                     <HelpCircle size={16} /> How It Works
                   </Link>
-                  {user?.role === 'seller' && (
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 border-t border-gray-100 mt-1">
-                      <LogOut size={16} /> Logout
-                    </button>
-                  )}
+
+                  {/* Seller Logout Button - ALWAYS VISIBLE */}
+                  <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2 border-t border-gray-100 mt-1">
+                    <LogOut size={16} /> Logout
+                  </button>
                 </div>
               </div>
 
