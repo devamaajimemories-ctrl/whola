@@ -44,9 +44,9 @@ export default function HowItWorks() {
                             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                                 <span className="text-2xl font-bold text-green-600">2</span>
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">Receive Quotes</h3>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">Receive Offers</h3>
                             <p className="text-gray-600 text-sm">
-                                Get WhatsApp/SMS messages from verified sellers with competitive prices.
+                                Verified sellers will review your request and send you competitive offers directly.
                             </p>
                         </div>
 
@@ -75,9 +75,9 @@ export default function HowItWorks() {
                             <TrendingUp size={20} />
                             FOR SELLERS
                         </div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Get High-Quality Buyer Leads</h2>
+                        <h2 className="text-3xl font-bold text-gray-900 mb-4">Zero Upfront Investment</h2>
                         <p className="text-gray-600 max-w-2xl mx-auto">
-                            Access verified buyer requirements and grow your business
+                            Grow your business without buying leads or paying subscription fees.
                         </p>
                     </div>
 
@@ -88,9 +88,9 @@ export default function HowItWorks() {
                                     <Zap className="text-green-600" size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-2">Start with ₹500 Free Credits</h3>
+                                    <h3 className="font-bold text-gray-900 mb-2">Get Matched Automatically</h3>
                                     <p className="text-sm text-gray-600">
-                                        New sellers get 10 free lead unlocks. No investment needed to start.
+                                        Our system connects you with buyers looking for your specific products. No need to hunt for customers.
                                     </p>
                                 </div>
                             </div>
@@ -102,9 +102,9 @@ export default function HowItWorks() {
                                     <Lock className="text-blue-600" size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-2">Pay Only ₹50 Per Lead</h3>
+                                    <h3 className="font-bold text-gray-900 mb-2">No Subscription Fees</h3>
                                     <p className="text-sm text-gray-600">
-                                        View buyer's phone and requirements. No subscription, no hidden fees.
+                                        Listing your business and products is completely free. We don't charge for "Leads".
                                     </p>
                                 </div>
                             </div>
@@ -118,7 +118,7 @@ export default function HowItWorks() {
                                 <div>
                                     <h3 className="font-bold text-gray-900 mb-2">Chat & Negotiate</h3>
                                     <p className="text-sm text-gray-600">
-                                        Secure in-app chat to discuss details and finalize prices.
+                                        Secure in-app chat to discuss details and finalize prices directly with interested buyers.
                                     </p>
                                 </div>
                             </div>
@@ -130,9 +130,9 @@ export default function HowItWorks() {
                                     <CreditCard className="text-yellow-600" size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-gray-900 mb-2">Get Paid Instantly</h3>
+                                    <h3 className="font-bold text-gray-900 mb-2">Success-Based Earnings</h3>
                                     <p className="text-sm text-gray-600">
-                                        95% of deal value transferred to your wallet upon delivery confirmation.
+                                        We only charge a small 5% platform fee when you successfully complete a deal and get paid.
                                     </p>
                                 </div>
                             </div>
@@ -141,7 +141,7 @@ export default function HowItWorks() {
 
                     <div className="text-center">
                         <Link href="/login" className="inline-block bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-3 rounded-lg transition-colors">
-                            Start Selling - Get ₹500 Free
+                            Start Selling Now
                         </Link>
                     </div>
                 </section>
