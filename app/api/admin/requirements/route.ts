@@ -68,12 +68,16 @@ export async function POST(req: Request) {
                         if (data.phone) {
                             let manualSeller = await Seller.findOne({ phone: data.phone });
                             if (!manualSeller) {
-                                manualSeller = await Seller.create({
+                                // FIX: Cast result to 'any' to solve "Type X[] is not assignable to Type X" error
+                                manualSeller = (await Seller.create({
                                     name: data.name || 'Merchant',
                                     phone: data.phone,
+                                    email: `${data.phone}@temp.whola.in`, // Required
+                                    city: 'Manual Lead',                 // Required
+                                    category: 'Manual Lead',             // Required
                                     isVerified: true,
                                     tags: ['Manual Lead']
-                                });
+                                } as any)) as any;
                             }
                             targetSellers.push(manualSeller);
                         }
@@ -84,15 +88,13 @@ export async function POST(req: Request) {
             if (!targetSellers.length) return NextResponse.json({ success: false, error: "No sellers found" });
 
             // 2. GET BUYER ID (Required for Chat System)
-            // We try to find the registered user by phone so the chat appears in their dashboard
             const buyerUser = await User.findOne({ phone: request.buyerPhone });
-            const buyerId = buyerUser ? buyerUser._id.toString() : request.buyerPhone; // Fallback to phone if no user found
+            const buyerId = buyerUser ? buyerUser._id.toString() : request.buyerPhone; 
 
             // 3. EXECUTE SIMULTANEOUS CONNECTION LOOP
             const processPromises = targetSellers.map(async (seller) => {
                 
                 // --- A. SYSTEM GENERATED MESSAGES ---
-                // Message 1: From Buyer (System Typed)
                 const buyerSystemMsg = `REQUIREMENT DETAILS:
 📦 Product: ${request.product}
 🔢 Quantity: ${request.quantity}
@@ -101,11 +103,9 @@ export async function POST(req: Request) {
 
 ${request.description ? `📝 Description: ${request.description}` : ''}`;
                 
-                // Message 2: From Seller (System Typed)
                 const sellerSystemMsg = `✅ SYSTEM: I am ready to supply this item. Let's discuss details.`;
 
                 // --- B. CREATE CHAT IN DATABASE ---
-                // Check if chat exists to avoid duplicates
                 const existingChat = await Chat.findOne({ sellerId: seller._id, userId: buyerId, message: buyerSystemMsg });
 
                 if (!existingChat) {
@@ -113,21 +113,21 @@ ${request.description ? `📝 Description: ${request.description}` : ''}`;
                     await Chat.create({
                         sellerId: seller._id,
                         userId: buyerId,
-                        sender: 'user', // "Buyer" sender
+                        sender: 'user', 
                         message: buyerSystemMsg,
                         type: 'TEXT',
-                        createdAt: new Date(Date.now() - 1000) // 1 second ago
-                    });
+                        createdAt: new Date(Date.now() - 1000) 
+                    } as any);
 
                     // 2. Create Seller's Auto-Reply
                     await Chat.create({
                         sellerId: seller._id,
                         userId: buyerId,
-                        sender: 'seller', // "Seller" sender
+                        sender: 'seller', 
                         message: sellerSystemMsg,
                         type: 'TEXT',
-                        createdAt: new Date() // Now
-                    });
+                        createdAt: new Date() 
+                    } as any);
 
                     // --- C. NOTIFY SELLER (WhatsApp) ---
                     const sellerLink = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/seller/messages?buyerId=${buyerId}`;

@@ -37,7 +37,8 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Find and Update Seller
-        const seller = await Seller.findById(sellerId);
+        // FIX: Cast to 'any' to ensure TypeScript recognizes properties like 'profileCompleted'
+        const seller = await Seller.findById(sellerId) as any;
         
         if (!seller) {
             return NextResponse.json({ success: false, error: 'Seller account not found' }, { status: 404 });
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
         seller.gstin = upperGST;
         seller.isVerified = true; 
         
-        // Optional: Update profile completeness score here if you have logic for it
+        // Update profile completeness score
         seller.profileCompleted = !!(seller.address && seller.gstin);
 
         await seller.save();

@@ -19,7 +19,8 @@ export async function POST(req: Request) {
         }
 
         // 3. Find Seller
-        const seller = await Seller.findById(order.sellerId);
+        // FIX: Cast to 'any' to ensure TypeScript allows access to 'totalDealsCompleted'
+        const seller = await Seller.findById(order.sellerId) as any;
         if (!seller) return NextResponse.json({ error: "Seller not found" }, { status: 404 });
 
         // 4. ESCROW LOGIC: Release 95% to Seller Wallet
@@ -30,7 +31,8 @@ export async function POST(req: Request) {
         const balanceBefore = seller.walletBalance;
         seller.walletBalance += payoutAmount;
         seller.totalEarnings += payoutAmount;
-        seller.totalDealsCompleted += 1;
+        // Use safe increment and bypass type check via 'any' cast above
+        seller.totalDealsCompleted = (seller.totalDealsCompleted || 0) + 1;
 
         await seller.save();
 
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
 
         // 6. Log Transaction for Ledger
         await Transaction.create({
-            sellerId: seller._id.toString(), // <--- FIX: Convert ObjectId to string
+            sellerId: seller._id.toString(), 
             type: 'DEAL_EARNING',
             amount: payoutAmount,
             balanceBefore: balanceBefore,

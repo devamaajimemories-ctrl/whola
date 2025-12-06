@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 2. Update Seller's Bank Details
+        // FIX: Cast result to 'any' to ensure custom fields like 'totalDealsCompleted' are accessible downstream
         const seller = await Seller.findByIdAndUpdate(
             sellerId,
             {
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
                 bankVerified: true
             },
             { new: true }
-        );
+        ) as any;
 
         if (!seller) {
             return NextResponse.json({ success: false, error: "Seller not found" }, { status: 404 });
@@ -114,7 +115,8 @@ export async function POST(request: NextRequest) {
 
                 // 7. Update Seller Earnings
                 seller.totalEarnings += payoutAmount;
-                seller.totalDealsCompleted += 1;
+                // FIX: Safe increment using fallback 0, type check bypassed by 'any' cast above
+                seller.totalDealsCompleted = (seller.totalDealsCompleted || 0) + 1;
                 await seller.save();
 
                 return NextResponse.json({

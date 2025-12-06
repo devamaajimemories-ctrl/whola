@@ -14,10 +14,7 @@ const UserSchema: Schema = new Schema({
     email: { type: String, required: true, unique: true, index: true },
     phone: { type: String },
     role: { type: String, enum: ['buyer', 'admin'], default: 'buyer' },
-}, {
-    timestamps: true,
-});
+}, { timestamps: true });
 
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
-
 export default User;

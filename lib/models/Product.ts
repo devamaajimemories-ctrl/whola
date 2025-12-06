@@ -8,7 +8,8 @@ export interface IProduct extends Document {
     category: string;
     images: string[];
     description: string;
-    specifications: Record<string, string>;
+    // Allow any object structure for flexible specifications
+    specifications: Record<string, any>; 
     status: 'PENDING' | 'APPROVED' | 'REJECTED';
     createdAt: Date;
 }
@@ -21,7 +22,8 @@ const ProductSchema: Schema = new Schema({
     category: { type: String, required: true },
     images: { type: [String], default: [] },
     description: { type: String },
-    specifications: { type: Map, of: String, default: {} },
+    // Use Schema.Types.Mixed for maximum flexibility
+    specifications: { type: Schema.Types.Mixed, default: {} }, 
     status: { 
         type: String, 
         enum: ['PENDING', 'APPROVED', 'REJECTED'], 
@@ -31,5 +33,5 @@ const ProductSchema: Schema = new Schema({
     timestamps: true
 });
 
-const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
+const Product = (mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema)) as Model<IProduct>;
 export default Product;

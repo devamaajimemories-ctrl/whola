@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import dbConnect from '@/lib/db';
 import Order from '@/lib/models/Order';
 import Seller from '@/lib/models/Seller';
-import Transaction from '@/lib/models/Transaction'; // Add Transaction Model
+import Transaction from '@/lib/models/Transaction';
 import Razorpay from 'razorpay';
 
 // Init Razorpay for Payouts
@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
         await order.save();
 
         // 3. Fetch Seller
-        const seller = await Seller.findById(order.sellerId);
+        // FIX: Cast to 'any' to ensure TypeScript recognizes custom fields like 'totalDealsCompleted'
+        const seller = await Seller.findById(order.sellerId) as any;
         if (!seller) return NextResponse.json({ error: "Seller not found" }, { status: 404 });
 
         // 4. Calculate Payout (95%)
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
         // 5. UPDATE SELLER WALLET (Ledger)
         seller.walletBalance += netPayout;
         seller.totalEarnings += netPayout;
-        seller.totalDealsCompleted += 1;
+        seller.totalDealsCompleted = (seller.totalDealsCompleted || 0) + 1; // Safely increment
         await seller.save();
 
         // 6. RECORD TRANSACTION

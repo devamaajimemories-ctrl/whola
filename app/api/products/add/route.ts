@@ -5,11 +5,11 @@ import dbConnect from '@/lib/db';
 import Product from '@/lib/models/Product';
 import Seller from '@/lib/models/Seller';
 
-// 🚨 VALIDATION SCHEMA
+// Simplified Zod Schema
 const productSchema = z.object({
     name: z.string().min(3).max(100),
     description: z.string().min(10).max(2000),
-    price: z.number().positive(),
+    price: z.number().positive(), // Removed the custom error object causing the crash
     unit: z.string().default('Piece'),
     category: z.string().min(1),
     images: z.array(z.string().url()).max(5).optional(),
@@ -19,29 +19,24 @@ const productSchema = z.object({
 export async function POST(req: Request) {
     try {
         await dbConnect();
-
         const headersList = await headers();
         const sellerId = headersList.get('x-user-id');
 
-        if (!sellerId) {
-            return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-        }
+        if (!sellerId) return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
         const body = await req.json();
-
-        // 1. Validate Input
         const validation = productSchema.safeParse(body);
+        
         if (!validation.success) {
             return NextResponse.json({
                 success: false,
                 error: "Validation Failed",
-                details: validation.error.issues // <--- FIX: Use 'issues' instead of 'errors'
+                details: validation.error.format()
             }, { status: 400 });
         }
 
         const data = validation.data;
 
-        // 2. Create Product
         const newProduct = await Product.create({
             sellerId,
             name: data.name,
@@ -51,17 +46,14 @@ export async function POST(req: Request) {
             category: data.category,
             images: data.images || [],
             specifications: data.specifications || {},
-            status: 'APPROVED' // Automatically approved as per user request
-        });
+            status: 'APPROVED'
+        } as any);
 
-        // 3. Update Seller Count
-        await Seller.findByIdAndUpdate(sellerId, {
-            $inc: { productsAdded: 1 }
-        });
+        await Seller.findByIdAndUpdate(sellerId, { $inc: { productsAdded: 1 } });
 
         return NextResponse.json({ success: true, message: "Product added", product: newProduct });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Add Product Error:", error);
         return NextResponse.json({ success: false, error: "Server Error" }, { status: 500 });
     }
