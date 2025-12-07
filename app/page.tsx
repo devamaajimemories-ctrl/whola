@@ -21,15 +21,15 @@ export default function Home() {
 
       <Categories />
 
-      {/* Ad Unit 1 */}
-      <GoogleAd slot="1234567890" /> {/* ⚠️ REPLACE WITH REAL SLOT ID */}
+      {/* Ad Unit 1 - Updated with your real Slot ID */}
+      <GoogleAd slot="8483275035" />
 
       <TrendingCategories />
       <ApparelFashion />
       <ConsumerElectronics />
 
-      {/* Ad Unit 2 */}
-      <GoogleAd slot="0987654321" /> {/* ⚠️ REPLACE WITH REAL SLOT ID */}
+      {/* Ad Unit 2 - Using the same Slot ID (You can create a second unit in AdSense if you want separate tracking later) */}
+      <GoogleAd slot="8483275035" />
 
       <HomeSupplies />
       <CosmeticsPersonalCare />

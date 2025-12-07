@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "YOUR_NEW_GOOGLE_VERIFICATION_CODE", // Update this from Search Console
+    google: "YOUR_NEW_GOOGLE_VERIFICATION_CODE", // Update this from Search Console if needed
   },
 };
 
@@ -63,7 +63,7 @@ export default function RootLayout({
         {/* AdSense Script */}
         <Script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" // ⚠️ REPLACE THIS WITH YOUR REAL PUBLISHER ID
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1998616030682500"
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />

@@ -34,7 +34,7 @@ const GoogleAd = ({ slot, format = "auto", responsive = true }: AdProps) => {
       <ins
         className="adsbygoogle"
         style={{ display: "block", width: "100%" }}
-        data-ad-client="ca-pub-1234567890123456" // ⚠️ REPLACE THIS WITH YOUR REAL PUBLISHER ID
+        data-ad-client="ca-pub-1998616030682500"
         data-ad-slot={slot}
         data-ad-format={format}
         data-full-width-responsive={responsive ? "true" : "false"}
