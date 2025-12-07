@@ -7,22 +7,20 @@ import SeoFooter from "@/components/SeoFooter";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// 1. Add Viewport export for mobile responsiveness scoring
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1e40af", // Matches your blue theme
+  themeColor: "#1e40af",
 };
 
-// 2. Enhanced Base Metadata
 export const metadata: Metadata = {
   metadataBase: new URL('https://youthbharat.com'), // CHANGE TO YOUR DOMAIN
   title: {
-    default: "YouthBharat WholesaleMart - B2B Marketplace India",
-    template: "%s | YouthBharat" // This auto-appends brand name to inner pages
+    default: "YouthBharat - B2B Marketplace & Local Services Search",
+    template: "%s | YouthBharat"
   },
-  description: "India's fastest growing B2B marketplace. Find verified sellers, manufacturers, and wholesalers for electronics, fashion, industrial machinery, and more.",
-  keywords: ["B2B Marketplace", "Wholesale India", "Manufacturers", "Suppliers", "Business to Business"],
+  description: "Search for Wholesale Manufacturers, Suppliers, and Local Services in India. Find Doctors, Transporters, Repair Services, and B2B Products in one place.",
+  keywords: ["B2B Marketplace", "Wholesalers", "Manufacturers", "Local Services", "Doctors near me", "Business Directory India", "Suppliers"],
   openGraph: {
     type: "website",
     locale: "en_IN",
@@ -30,10 +28,10 @@ export const metadata: Metadata = {
     siteName: "YouthBharat",
     images: [
       {
-        url: "/og-image.png", // You need to create this image in public folder
+        url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "YouthBharat B2B Marketplace",
+        alt: "YouthBharat Marketplace",
       },
     ],
   },
@@ -49,7 +47,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "YOUR_GOOGLE_VERIFICATION_CODE", // Get this from Google Search Console
+    google: "YOUR_GOOGLE_VERIFICATION_CODE",
   },
 };
 

@@ -957,5 +957,44 @@ export const industrialProducts = [
             "Air Handling Units (AHU)", "Fan Coil Units (FCU)", "Ventilation Fans (Industrial Exhaust)", "Air Curtains",
             "Cooling Towers", "Ducting (GI, Fabric)", "Air Grilles & Diffusers", "Dampers", "HVAC Filters", "Cooling Pads"
         ]
+    },
+
+    // ==================================================================
+    // 38. LOCAL SERVICES (New Addition for Justdial Competitors)
+    // ==================================================================
+    {
+        category: "Daily Services",
+        products: [
+            "Housekeeping Services", "Pest Control", "Carpenters", "Plumbers", "Electricians",
+            "Painters", "Laundry Services", "Tiffin Services", "Catering Services", "Event Organizers"
+        ]
+    },
+    {
+        category: "Health & Wellness",
+        products: [
+            "General Physicians", "Dentists", "Dermatologists", "Gyms", "Yoga Classes",
+            "Diagnostic Centres", "Hospitals", "Nursing Homes", "Ayurvedic Clinics"
+        ]
+    },
+    {
+        category: "Transport & Logistics",
+        products: [
+            "Packers and Movers", "Transporters", "Courier Services", "Taxi Services",
+            "Tempo Services", "Car Rental", "Warehouse Services"
+        ]
+    },
+    {
+        category: "Repairs & Maintenance",
+        products: [
+            "AC Repair", "Mobile Phone Repair", "Laptop Repair", "Car Repair Garages",
+            "Bike Service Centers", "Washing Machine Repair", "TV Repair"
+        ]
+    },
+    {
+        category: "Contractors & Consultants",
+        products: [
+            "Civil Contractors", "Interior Designers", "Architects", "CA & Tax Consultants",
+            "Legal Consultants", "Security Guards", "Manpower Supply"
+        ]
     }
 ];

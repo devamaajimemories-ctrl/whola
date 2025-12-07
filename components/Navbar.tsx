@@ -59,7 +59,7 @@ export default function Navbar() {
   }, [isMobileMenuOpen]);
 
   const user = session?.user || customUser;
-  
+   
   // Dynamic Dashboard Link
   const dashboardLink = user 
     ? (user.role === 'seller' ? '/seller/dashboard' : '/buyer/dashboard') 
@@ -166,14 +166,14 @@ export default function Navbar() {
 
             {/* DESKTOP ACTIONS */}
             <div className="hidden md:flex md:items-center md:space-x-1 flex-shrink-0">
-              
+               
               {/* Buyer Menu */}
               <div className="relative group h-16 flex items-center px-2">
                 <button className="flex items-center gap-1 text-gray-600 hover:text-blue-600 font-medium text-sm">
                   For Buyers <ChevronDown size={14} />
                 </button>
                 <div className="absolute top-[75%] right-0 w-56 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block p-1.5 z-50">
-                  
+                   
                   {/* Buyer Dashboard */}
                   <Link href={dashboardLink} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 rounded-lg flex items-center gap-2">
                     <LayoutDashboard size={16} /> Dashboard
@@ -202,7 +202,7 @@ export default function Navbar() {
                   For Sellers <ChevronDown size={14} />
                 </button>
                 <div className="absolute top-[75%] right-0 w-56 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block p-1.5 z-50">
-                   
+                    
                   {/* Seller Dashboard */}
                   <Link href={dashboardLink} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 rounded-lg flex items-center gap-2">
                     <LayoutDashboard size={16} /> Dashboard
@@ -276,7 +276,7 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden fixed inset-0 top-20 bg-white z-50 overflow-y-auto pb-20 animate-in slide-in-from-top-2">
             <div className="p-4 flex flex-col gap-4">
-              
+               
               <form onSubmit={handleSearchSubmit} className="relative">
                 <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
                 <input
@@ -316,7 +316,7 @@ export default function Navbar() {
 
               <div className="border-t border-gray-100 pt-2 space-y-1">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 py-2">Menu</p>
-                
+                 
                 {/* Mobile How It Works */}
                 <Link href="/how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl font-medium flex items-center gap-2">
                     <HelpCircle size={18} /> How It Works
@@ -353,9 +353,10 @@ export default function Navbar() {
       {/* --- POST REQUIREMENT BANNER --- */}
       <div onClick={() => setIsPostReqOpen(true)} className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 cursor-pointer hover:bg-blue-100 transition-colors">
         <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3">
-          <p className="text-xs sm:text-sm font-bold text-gray-800 flex items-center gap-1.5 truncate">
+          {/* Removed 'truncate' class to allow text wrapping for the longer service description */}
+          <p className="text-xs sm:text-sm font-bold text-gray-800 flex items-center gap-1.5">
             <Megaphone className="text-blue-600 flex-shrink-0" size={16} />
-            <span>Post your Requirement & Get Verified Sellers!</span>
+            <span>Post your Requirement & Get Verified Sellers! (for all services including transportation, catering, etc.)</span>
           </p>
           <button className="bg-blue-600 text-white text-[10px] sm:text-xs font-bold px-3 py-1.5 rounded-full shadow-sm flex-shrink-0">
             Post Now

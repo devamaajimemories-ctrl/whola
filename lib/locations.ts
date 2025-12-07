@@ -7,7 +7,14 @@ export const TARGET_CITIES = [
 ];
 
 // Helper to format URL slugs (e.g. "Mobile Phones" -> "mobile-phones")
-export const toSlug = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+export const toSlug = (text: string) => {
+    if (!text) return '';
+    return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+};
 
 // Helper to format Title Case (e.g. "mobile-phones" -> "Mobile Phones")
-export const fromSlug = (slug: string) => slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+export const fromSlug = (slug: string) => {
+    // Safety check to prevent "split of undefined" error
+    if (!slug) return ''; 
+    return slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};

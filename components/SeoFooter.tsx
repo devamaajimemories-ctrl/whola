@@ -172,7 +172,7 @@ const SeoFooter = async () => {
                 <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
                     <p className="text-gray-500">© 2025 YouthBharat WholesaleMart. All rights reserved.</p>
                     <div className="flex gap-6 text-gray-500">
-                        <Link href="/sitemap" className="hover:text-white transition-colors">Sitemap</Link>
+                        
                         <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
                         <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
                     </div>
