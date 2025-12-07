@@ -14,27 +14,17 @@ import {
 
 const SeoFooter = async () => {
     let displayCities: string[] = [];
-    
-    // 1. HARDCODED Categories (Apparel & Fashion) as requested
     const displayCategories = [
-        "Shirts",
-        "T-shirts",
-        "Womens Wear",
-        "Jewellery",
-        "Infant Wear"
+        "Shirts", "T-shirts", "Womens Wear", "Jewellery", "Infant Wear"
     ];
 
     try {
-        // 2. Fetch Active Cities from Database (Dynamic)
         await connectToDatabase();
         const dbCities = await Seller.distinct('city', {});
-        
-        // Filter valid cities
         displayCities = dbCities
             .filter((c: unknown) => typeof c === 'string' && c.trim().length > 0)
             .slice(0, 30)
             .sort();
-
     } catch (error) {
         console.error("Error fetching footer data:", error);
         displayCities = []; 
@@ -44,7 +34,7 @@ const SeoFooter = async () => {
         <footer className="bg-gray-900 text-gray-400 pt-16 pb-8 text-sm font-sans border-t-4 border-blue-600">
             <div className="container mx-auto px-4">
                 
-                {/* --- Top Section: Navigation Columns --- */}
+                {/* --- Top Section --- */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
                     
                     {/* About Us */}
@@ -55,7 +45,6 @@ const SeoFooter = async () => {
                         </h4>
                         <ul className="space-y-3">
                             <li><Link href="/about" className="hover:text-white transition-colors">About Our Company</Link></li>
-                            
                             <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
                             <li><Link href="/blogs" className="hover:text-white transition-colors">Business Blog</Link></li>
                             <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
@@ -107,10 +96,12 @@ const SeoFooter = async () => {
                             </div>
                             <div className="flex items-center gap-3">
                                 <Mail className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                                <a href="mailto:support@youthbharat.com" className="hover:text-white transition-colors">support@youthbharat.com</a>
+                                {/* DOMAIN CHANGE: Updated Email */}
+                                <a href="mailto:support@youthbharatwholesalemart.com" className="hover:text-white transition-colors">
+                                    support@youthbharatwholesalemart.com
+                                </a>
                             </div>
                             
-                            {/* Social Icons */}
                             <div className="flex gap-3 mt-6">
                                 <a href="#" className="bg-gray-800 p-2.5 rounded-full hover:bg-blue-600 hover:text-white transition-all"><Facebook size={18} /></a>
                                 <a href="#" className="bg-gray-800 p-2.5 rounded-full hover:bg-sky-500 hover:text-white transition-all"><Twitter size={18} /></a>
@@ -123,10 +114,7 @@ const SeoFooter = async () => {
 
                 <div className="h-px bg-gray-800 my-8"></div>
 
-                {/* --- Middle Section: Cities (Dynamic) & Categories (Static) --- */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
-                    
-                    {/* Dynamic Cities Block */}
                     {displayCities.length > 0 && (
                         <div>
                             <h5 className="text-white font-semibold mb-3 text-xs uppercase tracking-wider opacity-70">Suppliers by City</h5>
@@ -147,7 +135,6 @@ const SeoFooter = async () => {
                         </div>
                     )}
 
-                    {/* Static Popular Categories (Apparel & Fashion) */}
                     <div>
                         <h5 className="text-white font-semibold mb-3 text-xs uppercase tracking-wider opacity-70">Popular Categories</h5>
                         <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 leading-relaxed">
@@ -159,20 +146,17 @@ const SeoFooter = async () => {
                                     >
                                         {cat}
                                     </Link>
-                                    {/* Divider only if it's not the last item */}
                                     {idx < displayCategories.length - 1 && <span className="ml-2 text-gray-700">|</span>}
                                 </span>
                             ))}
-                            {/* "View All" button REMOVED as requested */}
                         </div>
                     </div>
                 </div>
 
-                {/* --- Bottom Section --- */}
                 <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs">
+                    {/* DOMAIN CHANGE: Copyright */}
                     <p className="text-gray-500">© 2025 YouthBharat WholesaleMart. All rights reserved.</p>
                     <div className="flex gap-6 text-gray-500">
-                        
                         <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
                         <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
                     </div>

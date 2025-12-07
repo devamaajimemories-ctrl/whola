@@ -7,6 +7,7 @@ export default function robots(): MetadataRoute.Robots {
             allow: '/',
             disallow: ['/admin/', '/buyer/dashboard/', '/seller/dashboard/', '/api/'],
         },
-        sitemap: 'https://youthbharat.com/sitemap.xml',
+        // DOMAIN CHANGE: Point to the new sitemap
+        sitemap: 'https://youthbharatwholesalemart.com/sitemap.xml',
     };
 }

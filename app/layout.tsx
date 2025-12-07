@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script"; // Import Script for AdSense
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
@@ -14,24 +15,27 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://youthbharat.com'), // CHANGE TO YOUR DOMAIN
+  // 1. DOMAIN CHANGE: Base URL for all metadata
+  metadataBase: new URL('https://youthbharatwholesalemart.com'), 
+  
   title: {
-    default: "YouthBharat - B2B Marketplace & Local Services Search",
-    template: "%s | YouthBharat"
+    default: "YouthBharat WholesaleMart - B2B Marketplace & Local Services",
+    template: "%s | YouthBharat WholesaleMart"
   },
   description: "Search for Wholesale Manufacturers, Suppliers, and Local Services in India. Find Doctors, Transporters, Repair Services, and B2B Products in one place.",
   keywords: ["B2B Marketplace", "Wholesalers", "Manufacturers", "Local Services", "Doctors near me", "Business Directory India", "Suppliers"],
   openGraph: {
     type: "website",
     locale: "en_IN",
-    url: "https://youthbharat.com",
-    siteName: "YouthBharat",
+    // 2. DOMAIN CHANGE: OG URL
+    url: "https://youthbharatwholesalemart.com", 
+    siteName: "YouthBharat WholesaleMart",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "YouthBharat Marketplace",
+        alt: "YouthBharat WholesaleMart Marketplace",
       },
     ],
   },
@@ -47,7 +51,8 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: "YOUR_GOOGLE_VERIFICATION_CODE",
+    // 3. REMINDER: You will get a NEW code from Google Search Console for the new domain
+    google: "YOUR_NEW_GOOGLE_VERIFICATION_CODE", 
   },
 };
 
@@ -58,6 +63,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* 4. ADSENSE INTEGRATION: Replace client=ca-pub-XXX with your real ID */}
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR_PUBLISHER_ID"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
+      </head>
       <body className={inter.className}>
         <Providers>
           <Navbar />
