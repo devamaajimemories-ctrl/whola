@@ -59,7 +59,7 @@ export default function Navbar() {
   }, [isMobileMenuOpen]);
 
   const user = session?.user || customUser;
-   
+    
   // Dynamic Dashboard Link
   const dashboardLink = user 
     ? (user.role === 'seller' ? '/seller/dashboard' : '/buyer/dashboard') 
@@ -166,14 +166,14 @@ export default function Navbar() {
 
             {/* DESKTOP ACTIONS */}
             <div className="hidden md:flex md:items-center md:space-x-1 flex-shrink-0">
-               
+                
               {/* Buyer Menu */}
               <div className="relative group h-16 flex items-center px-2">
                 <button className="flex items-center gap-1 text-gray-600 hover:text-blue-600 font-medium text-sm">
                   For Buyers <ChevronDown size={14} />
                 </button>
                 <div className="absolute top-[75%] right-0 w-56 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block p-1.5 z-50">
-                   
+                    
                   {/* Buyer Dashboard */}
                   <Link href={dashboardLink} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 rounded-lg flex items-center gap-2">
                     <LayoutDashboard size={16} /> Dashboard
@@ -202,7 +202,7 @@ export default function Navbar() {
                   For Sellers <ChevronDown size={14} />
                 </button>
                 <div className="absolute top-[75%] right-0 w-56 bg-white shadow-xl rounded-xl border border-gray-100 hidden group-hover:block p-1.5 z-50">
-                    
+                     
                   {/* Seller Dashboard */}
                   <Link href={dashboardLink} className="block px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 rounded-lg flex items-center gap-2">
                     <LayoutDashboard size={16} /> Dashboard
@@ -248,8 +248,8 @@ export default function Navbar() {
               {/* AUTH BUTTONS (Only if NOT logged in) */}
               {!user && (
                 <div className="flex items-center gap-2 ml-1">
-                  <Link href="/login" className="text-gray-600 hover:text-blue-600 font-medium text-sm px-3 py-1.5 rounded-lg hover:bg-gray-50">Sign In</Link>
-                  <Link href="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-bold shadow-sm">Join Free</Link>
+                  <Link href="/login?role=buyer" className="text-gray-600 hover:text-blue-600 font-medium text-sm px-3 py-1.5 rounded-lg hover:bg-gray-50">Login</Link>
+                  <Link href="/register" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full text-sm font-bold shadow-sm">Become a Seller</Link>
                 </div>
               )}
             </div>
@@ -276,7 +276,7 @@ export default function Navbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden fixed inset-0 top-20 bg-white z-50 overflow-y-auto pb-20 animate-in slide-in-from-top-2">
             <div className="p-4 flex flex-col gap-4">
-               
+                
               <form onSubmit={handleSearchSubmit} className="relative">
                 <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
                 <input
@@ -300,11 +300,11 @@ export default function Navbar() {
               {/* AUTH BUTTONS (If NOT logged in) */}
               {!user && (
                 <div className="grid grid-cols-2 gap-3">
-                  <Link href="/login" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3.5 rounded-xl font-bold">
-                      <LogIn size={20} /> Sign In
+                  <Link href="/login?role=buyer" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3.5 rounded-xl font-bold">
+                      <LogIn size={20} /> Login
                   </Link>
                   <Link href="/register" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center justify-center gap-2 bg-blue-600 text-white py-3.5 rounded-xl font-bold shadow-md">
-                    <User size={20} /> Join Free
+                    <User size={20} /> Become a Seller
                   </Link>
                 </div>
               )}
@@ -316,7 +316,7 @@ export default function Navbar() {
 
               <div className="border-t border-gray-100 pt-2 space-y-1">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 py-2">Menu</p>
-                 
+                  
                 {/* Mobile How It Works */}
                 <Link href="/how-it-works" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-3 text-gray-700 hover:bg-gray-50 rounded-xl font-medium flex items-center gap-2">
                     <HelpCircle size={18} /> How It Works
