@@ -2,7 +2,6 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ISeller extends Document {
     name: string;
-    // Made Optional to prevent 'create' errors
     email?: string; 
     phone: string;
     city?: string;
@@ -15,25 +14,29 @@ export interface ISeller extends Document {
     pendingPayouts: number;
     ratingAverage: number;
     ratingCount: number;
-    totalDealsCompleted: number; // Explicitly defined
+    totalDealsCompleted: number;
     totalViews: number;
     isVerified: boolean;
 
+    // RICH DATA (New Fields)
+    businessType?: string;    // e.g. "PVC Pipe Manufacturer"
+    address?: string;         // e.g. "Shop 12, Main Market, Ranikhet"
+    openingHours?: string;    // e.g. "Mon-Sun: 9AM - 9PM"
+    images: string[];         // e.g. ["https://lh5.googleusercontent.com/..."]
+    
     // Business Details
     gstin?: string;
-    businessType?: string;
     yearEstablished?: number;
     employeeCount?: string;
     annualTurnover?: string;
 
-    // Address
-    address?: string;
+    // Address Components
     pincode?: string;
     state?: string;
     country?: string;
 
     // Profile Completion
-    profileCompleted?: boolean; // Explicitly defined
+    profileCompleted?: boolean;
     productsAdded?: number;
     hasGSTIN?: boolean;
     hasBusinessDetails?: boolean;
@@ -50,7 +53,6 @@ export interface ISeller extends Document {
 
 const SellerSchema: Schema = new Schema({
     name: { type: String, required: true },
-    // Removed 'required: true' to fix migration/manual creation scripts
     email: { type: String, default: '' }, 
     phone: { type: String, required: true, unique: true, index: true },
     city: { type: String, default: '' },
@@ -67,15 +69,19 @@ const SellerSchema: Schema = new Schema({
     totalViews: { type: Number, default: 0 },
     isVerified: { type: Boolean, default: false },
 
+    // RICH DATA
+    businessType: { type: String, default: 'Supplier' },
+    address: { type: String, default: '' },
+    openingHours: { type: String, default: '' },
+    images: { type: [String], default: [] }, // Stores URLs
+
     // Business Details
     gstin: { type: String, default: '' },
-    businessType: { type: String, default: '' },
     yearEstablished: { type: Number, default: null },
     employeeCount: { type: String, default: '' },
     annualTurnover: { type: String, default: '' },
 
     // Address
-    address: { type: String, default: '' },
     pincode: { type: String, default: '' },
     state: { type: String, default: '' },
     country: { type: String, default: 'India' },
@@ -95,6 +101,5 @@ const SellerSchema: Schema = new Schema({
     timestamps: true,
 });
 
-// Use 'as any' casting to prevent strict Model type conflicts during build
 const Seller = (mongoose.models.Seller || mongoose.model<ISeller>('Seller', SellerSchema)) as Model<ISeller>;
 export default Seller;

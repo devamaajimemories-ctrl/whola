@@ -1,10 +1,9 @@
 import { MetadataRoute } from 'next';
-import { industrialProducts } from '@/lib/industrialData';
-import { TARGET_CITIES, toSlug } from '@/lib/locations';
+import { toSlug } from '@/lib/locations';
 import dbConnect from '@/lib/db';
 import Seller from '@/lib/models/Seller';
 
-// Re-generate sitemap every 1 hour to capture newly scraped sellers
+// Re-generate sitemap every 1 hour to capture newly scraped/added sellers
 export const revalidate = 3600; 
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -28,55 +27,76 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }));
 
     // =========================================================
-    // 2. MARKET ROUTES (Programmatic SEO - "The SEO Honey Pots")
-    // Combinations of Product x City (Old Code)
+    // 2. MARKET ROUTES (Dynamic & Data-Driven)
+    // ONLY generate pages for City/Category pairs that exist in DB
     // =========================================================
-    const marketRoutes: MetadataRoute.Sitemap = [];
-    const allProducts = industrialProducts.flatMap(cat => cat.products);
+    let marketRoutes: MetadataRoute.Sitemap = [];
 
-    for (const product of allProducts) {
-        for (const city of TARGET_CITIES) {
-            marketRoutes.push({
-                url: `${baseUrl}/market/${toSlug(product)}/${toSlug(city)}`,
-                lastModified: new Date(),
-                changeFrequency: 'weekly' as const,
-                priority: 0.8,
-            });
-        }
+    try {
+        await dbConnect();
+
+        // AGGREGATION: Find all unique combinations of 'category' and 'city'
+        // that have at least one seller.
+        // We filter by 'isVerified: true' to ensure high-quality pages for Google.
+        const activeMarkets = await Seller.aggregate([
+            { 
+                $match: { 
+                    isVerified: true,
+                    category: { $exists: true, $ne: "" },
+                    city: { $exists: true, $ne: "" }
+                } 
+            },
+            { 
+                $group: { 
+                    _id: { 
+                        category: "$category", 
+                        city: "$city" 
+                    },
+                    lastUpdated: { $max: "$updatedAt" } // Get the most recent update in this market
+                } 
+            }
+        ]);
+
+        console.log(`✅ [Sitemap] Found ${activeMarkets.length} active markets in DB.`);
+
+        marketRoutes = activeMarkets.map((market) => ({
+            url: `${baseUrl}/market/${toSlug(market._id.category)}/${toSlug(market._id.city)}`,
+            lastModified: market.lastUpdated ? new Date(market.lastUpdated) : new Date(),
+            changeFrequency: 'weekly' as const,
+            priority: 0.8,
+        }));
+
+    } catch (error) {
+        console.error("❌ [Sitemap] Error fetching active markets:", error);
     }
 
     // =========================================================
-    // 3. SELLER ROUTES (Database Content - "The Inventory")
-    // Fetching verified sellers from MongoDB (New Code)
+    // 3. SELLER ROUTES (Individual Profiles)
     // =========================================================
     let sellerRoutes: MetadataRoute.Sitemap = [];
     
     try {
-        await dbConnect();
-        
-        // Fetch only Verified sellers. 
-        // We use .lean() for performance and select only needed fields.
+        // Reuse the db connection from above
         const sellers = await Seller.find({ isVerified: true })
             .select('_id updatedAt')
             .lean();
 
         sellerRoutes = sellers.map((seller) => ({
             url: `${baseUrl}/supplier/${seller._id}`,
-            // Use the actual update time of the seller, or fallback to now
             lastModified: seller.updatedAt ? new Date(seller.updatedAt) : new Date(),
             changeFrequency: 'weekly' as const,
-            priority: 0.9, // High priority: These are real businesses
+            priority: 0.9, 
         }));
 
         console.log(`✅ [Sitemap] Generated ${sellerRoutes.length} seller URLs`);
 
     } catch (error) {
-        console.error("❌ [Sitemap] Error fetching sellers from DB:", error);
-        // We do not throw error here, so that at least static and market routes are returned
+        console.error("❌ [Sitemap] Error fetching sellers:", error);
     }
 
     // =========================================================
     // 4. COMBINE AND RETURN
     // =========================================================
+    // If the DB is empty, this will just return static routes (Safe!)
     return [...staticRoutes, ...marketRoutes, ...sellerRoutes];
 }

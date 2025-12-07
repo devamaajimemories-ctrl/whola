@@ -55,7 +55,7 @@ const SeoFooter = async () => {
                         </h4>
                         <ul className="space-y-3">
                             <li><Link href="/about" className="hover:text-white transition-colors">About Our Company</Link></li>
-                            <li><Link href="/success-stories" className="hover:text-white transition-colors">Success Stories</Link></li>
+                            
                             <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
                             <li><Link href="/blogs" className="hover:text-white transition-colors">Business Blog</Link></li>
                             <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
