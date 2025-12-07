@@ -65,8 +65,12 @@ function LoginContent() {
             });
             const data = await res.json();
             setLastChannel(channel);
-            setStep("OTP");
-            setCountdown(120);
+            
+            if (!isResend) {
+                setStep("OTP");
+            }
+            
+            setCountdown(120); // Reset timer to 2 minutes
             setCanResend(false);
 
             if (data.success) {
@@ -80,8 +84,9 @@ function LoginContent() {
             }
         } catch (err) {
             setError("Something went wrong, but you can still enter OTP if you received it.");
-            setLastChannel(channel);
-            setStep("OTP");
+            if (!isResend) {
+                setStep("OTP");
+            }
             setCountdown(120);
         } finally {
             setLoading(false);
@@ -166,6 +171,23 @@ function LoginContent() {
                             <button onClick={verifyOtp} disabled={loading} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50">
                                 {loading ? <Loader2 className="animate-spin h-5 w-5 mx-auto" /> : <span className="flex items-center justify-center">Verify & Continue <ArrowRight className="ml-2 h-5 w-5" /></span>}
                             </button>
+                            
+                            {/* Restored Resend OTP Option with Timer */}
+                            <div className="text-center">
+                                {countdown > 0 ? (
+                                    <p className="text-gray-500 text-sm font-medium">
+                                        Resend OTP in <span className="text-indigo-600">{Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}</span>
+                                    </p>
+                                ) : (
+                                    <button 
+                                        onClick={() => sendOtp(lastChannel, true)} 
+                                        disabled={loading}
+                                        className="text-indigo-600 font-semibold hover:underline text-sm disabled:opacity-50 transition-colors"
+                                    >
+                                        Resend OTP
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     )}
                 </div>
