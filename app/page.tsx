@@ -1,6 +1,6 @@
 import React from "react";
 import Categories from "@/components/Categories";
-import GoogleAd from "@/components/GoogleAd"; // Updated Import
+import GoogleAd from "@/components/GoogleAd";
 import TrendingCategories from "@/components/TrendingCategories";
 import ApparelFashion from "@/components/ApparelFashion";
 import ConsumerElectronics from "@/components/ConsumerElectronics";
@@ -21,15 +21,15 @@ export default function Home() {
 
       <Categories />
 
-      {/* 1. First Ad Unit */}
-      <GoogleAd slot="YOUR_AD_SLOT_ID_1" />
+      {/* Ad Unit 1 */}
+      <GoogleAd slot="1234567890" /> {/* ⚠️ REPLACE WITH REAL SLOT ID */}
 
       <TrendingCategories />
       <ApparelFashion />
       <ConsumerElectronics />
 
-      {/* 2. Second Ad Unit */}
-      <GoogleAd slot="YOUR_AD_SLOT_ID_2" />
+      {/* Ad Unit 2 */}
+      <GoogleAd slot="0987654321" /> {/* ⚠️ REPLACE WITH REAL SLOT ID */}
 
       <HomeSupplies />
       <CosmeticsPersonalCare />

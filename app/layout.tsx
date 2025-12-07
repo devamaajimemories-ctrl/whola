@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import Script from "next/script"; // Import Script for AdSense
+import Script from "next/script";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Providers from "@/components/Providers";
@@ -15,20 +15,17 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  // 1. DOMAIN CHANGE: Base URL for all metadata
-  metadataBase: new URL('https://youthbharatwholesalemart.com'), 
-  
+  metadataBase: new URL('https://youthbharatwholesalemart.com'),
   title: {
     default: "YouthBharat WholesaleMart - B2B Marketplace & Local Services",
     template: "%s | YouthBharat WholesaleMart"
   },
-  description: "Search for Wholesale Manufacturers, Suppliers, and Local Services in India. Find Doctors, Transporters, Repair Services, and B2B Products in one place.",
-  keywords: ["B2B Marketplace", "Wholesalers", "Manufacturers", "Local Services", "Doctors near me", "Business Directory India", "Suppliers"],
+  description: "Search for Wholesale Manufacturers, Suppliers, and Local Services in India.",
+  keywords: ["B2B Marketplace", "Wholesalers", "Manufacturers", "Local Services"],
   openGraph: {
     type: "website",
     locale: "en_IN",
-    // 2. DOMAIN CHANGE: OG URL
-    url: "https://youthbharatwholesalemart.com", 
+    url: "https://youthbharatwholesalemart.com",
     siteName: "YouthBharat WholesaleMart",
     images: [
       {
@@ -51,8 +48,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    // 3. REMINDER: You will get a NEW code from Google Search Console for the new domain
-    google: "YOUR_NEW_GOOGLE_VERIFICATION_CODE", 
+    google: "YOUR_NEW_GOOGLE_VERIFICATION_CODE", // Update this from Search Console
   },
 };
 
@@ -64,10 +60,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* 4. ADSENSE INTEGRATION: Replace client=ca-pub-XXX with your real ID */}
+        {/* AdSense Script */}
         <Script
           async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR_PUBLISHER_ID"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1234567890123456" // ⚠️ REPLACE THIS WITH YOUR REAL PUBLISHER ID
           crossOrigin="anonymous"
           strategy="afterInteractive"
         />
