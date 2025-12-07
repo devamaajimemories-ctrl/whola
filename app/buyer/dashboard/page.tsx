@@ -3,14 +3,14 @@ import { headers } from "next/headers";
 import User from "@/lib/models/User";
 import Request from "@/lib/models/Request";
 import dbConnect from "@/lib/db";
-import { User as UserIcon, Phone, Mail, ShieldCheck, Clock, MessageCircle } from 'lucide-react';
+import { User as UserIcon, Phone, Mail, ShieldCheck, MessageCircle } from 'lucide-react';
 import Chat from "@/lib/models/Chat";
 import Seller from "@/lib/models/Seller";
 import Link from "next/link";
 
 // Components (Frontend)
 import Categories from "@/components/Categories";
-import AdPlaceholder from "@/components/AdPlaceholder";
+// REMOVED: import AdPlaceholder... (This was causing the error)
 import TrendingCategories from "@/components/TrendingCategories";
 import ApparelFashion from "@/components/ApparelFashion";
 import ConsumerElectronics from "@/components/ConsumerElectronics";

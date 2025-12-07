@@ -1,5 +1,5 @@
 import React from 'react';
-import { Lock, Eye, Database, ShieldCheck, UserCheck, AlertCircle } from 'lucide-react';
+import { Lock, Eye, Database, ShieldCheck, UserCheck, AlertCircle, Globe } from 'lucide-react';
 import Link from 'next/link';
 
 export default function PrivacyPage() {
@@ -14,7 +14,7 @@ export default function PrivacyPage() {
           </h1>
           <p className="mt-4 text-gray-400 max-w-2xl">
             At YouthBharat WholesaleMart, we value your trust. This policy outlines how we handle your data, 
-            including business listings sourced from public directories.
+            including business listings and advertising data.
           </p>
         </div>
       </div>
@@ -44,7 +44,7 @@ export default function PrivacyPage() {
                 <strong>Financial Information:</strong> For Sellers, we collect GSTIN and Bank Account details to process payouts via our Escrow system.
               </li>
               <li>
-                <strong>Publicly Available Data :</strong> We use automated technology to aggregate business contact information (Business Name, City, Category, Public Phone) from publicly available sources to create a comprehensive business directory.
+                <strong>Publicly Available Data:</strong> We use automated technology to aggregate business contact information (Business Name, City, Category, Public Phone) from publicly available sources to create a comprehensive business directory.
               </li>
             </ul>
           </section>
@@ -59,7 +59,7 @@ export default function PrivacyPage() {
                 <strong>To Facilitate Trade:</strong> We display your Business Name, City, and Products to potential buyers.
               </li>
               <li>
-                <strong>Safety & Fraud Prevention:</strong> We mask your phone number on public profiles to prevent spam. Contact details are only shared when a connection is "Unlocked" or a deal is initiated/page.tsx].
+                <strong>Safety & Fraud Prevention:</strong> We mask your phone number on public profiles to prevent spam. Contact details are only shared when a connection is "Unlocked" or a deal is initiated.
               </li>
               <li>
                 <strong>Chat Monitoring:</strong> To ensure platform safety and prevent fee avoidance, our automated systems monitor and redact Personally Identifiable Information (PII) like phone numbers shared in chat messages.
@@ -67,27 +67,45 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          {/* Section 3: Data Sharing */}
+          {/* Section 3: Advertising (NEW REQUIRED SECTION) */}
+          <section className="bg-blue-50 p-6 rounded-xl border border-blue-100">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Globe size={20} className="text-blue-600"/> 3. Advertising Partners
+            </h2>
+            <p className="text-gray-600 mb-3">
+              We use third-party advertising companies to serve ads when you visit our website.
+            </p>
+            <ul className="list-disc pl-5 space-y-2 text-gray-600">
+              <li>
+                <strong>Google AdSense:</strong> Google uses cookies to serve ads based on your prior visits to our website or other websites. 
+                Google's use of advertising cookies enables it and its partners to serve ads to you based on your visit to our sites and/or other sites on the Internet.
+              </li>
+              <li>
+                Users may opt out of personalized advertising by visiting <a href="https://www.google.com/settings/ads" target="_blank" rel="nofollow" className="text-blue-600 hover:underline">Google Ad Settings</a>.
+              </li>
+            </ul>
+          </section>
+
+          {/* Section 4: Data Sharing */}
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <UserCheck size={20} className="text-blue-600"/> 3. Data Sharing & Disclosure
+              <UserCheck size={20} className="text-blue-600"/> 4. Data Sharing & Disclosure
             </h2>
             <p className="text-gray-600 mb-3">We do not sell your personal data. We share data only in the following ways:</p>
             <ul className="list-disc pl-5 space-y-2 text-gray-600">
               <li>
                 <strong>With Payment Processors:</strong> Transaction details are shared with <strong>Razorpay</strong> to facilitate Escrow payments and settlements.
               </li>
-              
               <li>
                 <strong>Legal Requirements:</strong> We may disclose data if required by Indian law or legal process.
               </li>
             </ul>
           </section>
 
-          {/* Section 4: Security */}
+          {/* Section 5: Security */}
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <ShieldCheck size={20} className="text-blue-600"/> 4. Data Security
+              <ShieldCheck size={20} className="text-blue-600"/> 5. Data Security
             </h2>
             <ul className="list-disc pl-5 space-y-2 text-gray-600">
               <li>
@@ -102,10 +120,10 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          {/* Section 5: Disclaimer for Listed Businesses */}
+          {/* Section 6: Disclaimer for Listed Businesses */}
           <section className="bg-yellow-50 p-6 rounded-xl border border-yellow-200">
             <h2 className="text-xl font-bold text-yellow-800 mb-4 flex items-center gap-2">
-              <AlertCircle size={20}/> 5. Notice for Unclaimed Listings
+              <AlertCircle size={20}/> 6. Notice for Unclaimed Listings
             </h2>
             <p className="text-yellow-800/80 mb-3">
               If your business is listed on YouthBharat and you did not create the listing (sourced via our 
@@ -118,7 +136,7 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">6. Contact Us</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">7. Contact Us</h2>
             <p className="text-gray-600 mb-2">
               For any privacy-related concerns or to request data deletion, please reach out to our Grievance Officer:
             </p>

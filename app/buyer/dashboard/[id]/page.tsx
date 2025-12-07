@@ -2,11 +2,10 @@ import React from "react";
 import User from "@/lib/models/User";
 import dbConnect from "@/lib/db";
 import { User as UserIcon, Phone, Mail, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
-import Link from "next/link";
 
 // Import Marketplace Components
 import Categories from "@/components/Categories";
-import AdPlaceholder from "@/components/AdPlaceholder";
+import GoogleAd from "@/components/GoogleAd"; // ✅ UPDATED IMPORT
 import TrendingCategories from "@/components/TrendingCategories";
 import ApparelFashion from "@/components/ApparelFashion";
 import ConsumerElectronics from "@/components/ConsumerElectronics";
@@ -20,15 +19,12 @@ export default async function BuyerPage({ params }: { params: { id: string } }) 
 
     try {
         // 1. Safely attempt to find the user
-        // We use a try-catch block to prevent the page from crashing if the ID is malformed
         user = await User.findById(params.id);
     } catch (error) {
         console.error("Safe Fail: Invalid User ID detected, switching to Guest Mode.");
     }
 
     // 2. PRODUCTION SAFEGUARD: Fallback to Guest
-    // If no user is found (or ID is wrong), we create a temporary "Guest" object.
-    // This ensures the website NEVER shows a blank page.
     if (!user) {
         isGuest = true;
         user = {
@@ -46,7 +42,7 @@ export default async function BuyerPage({ params }: { params: { id: string } }) 
             <div className="w-full bg-gradient-to-r from-blue-900 to-blue-800 py-10 text-white shadow-md">
                 <div className="container mx-auto px-4">
 
-                    {/* Security Notice: Only show if we fell back to Guest (Debugging for you) */}
+                    {/* Security Notice */}
                     {isGuest && (
                         <div className="mb-4 bg-yellow-500/20 border border-yellow-400/30 p-3 rounded-lg flex items-center text-yellow-100 text-sm">
                             <AlertTriangle className="mr-2 h-4 w-4" />
@@ -90,13 +86,18 @@ export default async function BuyerPage({ params }: { params: { id: string } }) 
             </div>
 
             {/* 3. The "Whole Website" Content */}
-            {/* This section is now guaranteed to render because we removed the early 'return' */}
             <Categories />
-            <AdPlaceholder />
+            
+            {/* ✅ AD UNIT ADDED HERE */}
+            <GoogleAd slot="YOUR_AD_SLOT_ID_3" />
+            
             <TrendingCategories />
             <ApparelFashion />
             <ConsumerElectronics />
-            <AdPlaceholder />
+            
+            {/* ✅ AD UNIT ADDED HERE */}
+            <GoogleAd slot="YOUR_AD_SLOT_ID_4" />
+            
             <HomeSupplies />
         </main>
     );
