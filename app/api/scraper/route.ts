@@ -5,8 +5,8 @@ import puppeteer from "puppeteer-core";
 import dbConnect from "@/lib/db";
 import Seller from "@/lib/models/Seller";
 
-// Allow longer timeout for scraping operations
-export const maxDuration = 60;
+// Keep the timeout high (5 mins) to allow finding 200 items
+export const maxDuration = 300; 
 export const dynamic = "force-dynamic";
 
 // Simple in-memory store for rate limiting
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
         const ip = headersList.get("x-forwarded-for") || "unknown";
         
         const lastRequest = rateLimit.get(ip);
-        const COOLDOWN = 10000; // 10 seconds cooldown
+        const COOLDOWN = 10000; 
 
         if (lastRequest && Date.now() - lastRequest < COOLDOWN) {
             return NextResponse.json(
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         const page = await browser.newPage();
 
         // 5. NAVIGATE
-        const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(query)}/@?hl=en`;
+        const searchUrl = `http://googleusercontent.com/maps.google.com/maps?q=${encodeURIComponent(query)}&hl=en`;
 
         try {
             await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
             console.log("⚠️ [Scraper] Navigation took too long, but continuing...");
         }
 
-        // 6. AUTO-SCROLL
+        // 6. AUTO-SCROLL (TARGET: 200 Items)
         try {
             await page.waitForSelector('div[role="feed"]', { timeout: 15000 });
             await page.evaluate(async () => {
@@ -92,7 +92,9 @@ export async function POST(req: Request) {
                         wrapper.scrollBy(0, distance);
                         totalHeight += distance;
                         const items = document.querySelectorAll('div[role="article"]').length;
-                        if (totalHeight >= scrollHeight || items >= 30) {
+                        
+                        // 🛑 STOP SCRAPING WHEN WE HIT 200 ITEMS
+                        if (totalHeight >= scrollHeight || items >= 200) {
                             clearInterval(timer);
                             resolve(true);
                         }
@@ -128,11 +130,10 @@ export async function POST(req: Request) {
 
         await browser.close();
 
-        // 8. DATABASE SYNC (The Critical Part)
+        // 8. DATABASE SYNC (Save ALL 200 items)
         const validSellers = rawSellers.filter(s => s.phone !== "No Phone" && s.name !== "Unknown Seller");
 
         if (validSellers.length > 0) {
-            // A. SAVE REAL DATA TO DB (Private)
             const operations = validSellers.map(seller => ({
                 updateOne: {
                     filter: { phone: seller.phone },
@@ -148,26 +149,33 @@ export async function POST(req: Request) {
                     upsert: true
                 }
             }));
+            
+            // 💾 THIS SAVES ALL 200 TO DATABASE
             await Seller.bulkWrite(operations);
             console.log(`💾 [Scraper] Saved ${validSellers.length} real contacts to DB.`);
         }
 
-        // B. MASK DATA FOR FRONTEND (Public Safety)
-        // We set phone/email to NULL before sending back to the user
-        const safeSellers = validSellers.map(seller => ({
-            name: seller.name,
-            city: seller.city,
-            category: query,
-            phone: null, // <--- HIDDEN
-            email: null, // <--- HIDDEN
-            isVerified: true,
-            contactLabel: "Login to Contact" 
-        }));
+        // 9. PREPARE FRONTEND RESPONSE (Slice to 50)
+        // We take the big list (validSellers) and only grab the first 50 for the UI
+        const displayLimit = 50; 
+        
+        const safeSellers = validSellers
+            .slice(0, displayLimit) // <--- TRUNCATE HERE FOR FRONTEND
+            .map(seller => ({
+                name: seller.name,
+                city: seller.city,
+                category: query,
+                phone: null, 
+                email: null, 
+                isVerified: true,
+                contactLabel: "Login to Contact" 
+            }));
 
         return NextResponse.json({
             success: true,
-            data: safeSellers,
-            savedCount: validSellers.length
+            data: safeSellers, // Sends only 50
+            savedCount: validSellers.length, // Tells frontend "We actually found 200"
+            message: `Successfully scraped and saved ${validSellers.length} sellers. Showing top ${displayLimit}.`
         });
 
     } catch (error: any) {

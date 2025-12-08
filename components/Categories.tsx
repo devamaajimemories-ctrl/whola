@@ -19,7 +19,9 @@ import {
     Building2,
     Armchair,
     Heart,
-    Hammer
+    Hammer,
+    Key,     // Added for Real Estate
+    MapPin   // Added for Local Services
 } from "lucide-react";
 import Link from "next/link";
 
@@ -149,6 +151,21 @@ const categories = [
         icon: Hammer,
         color: "bg-zinc-100 text-zinc-600",
         items: ["Hand Tools", "Power Tools", "Drills"]
+    },
+    // New Categories Added Below
+    {
+        name: "Real Estate & Rentals",
+        slug: "real-estate",
+        icon: Key,
+        color: "bg-emerald-100 text-emerald-600",
+        items: ["Rentals", "PG & Hostels", "Commercial"]
+    },
+    {
+        name: "Local Services",
+        slug: "local-services",
+        icon: MapPin,
+        color: "bg-violet-100 text-violet-600",
+        items: ["Sweet Shops", "Restaurants", "Services"]
     },
 ];
 

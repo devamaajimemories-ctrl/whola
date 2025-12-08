@@ -178,6 +178,28 @@ export const categoryData: Record<string, { title: string; subCategories: string
             "Measuring Tools", "Tapes", "Levels", "Calipers"
         ]
     },
+    // New Categories for Housing & Map Services
+    "real-estate": {
+        title: "Real Estate & Rentals",
+        subCategories: [
+            "Residential Rentals", "Apartments", "Independent Houses", "Villas", "Studio Apartments",
+            "Commercial Rentals", "Office Spaces", "Shops", "Warehouses", "Showrooms",
+            "Accommodation", "PG", "Hostels", "Service Apartments", "Guest Houses",
+            "Land & Plots", "Agricultural Land", "Commercial Plots", "Residential Plots",
+            "Property Services", "Real Estate Agents", "Property Management", "Tenant Verification"
+        ]
+    },
+    "local-services": {
+        title: "Local Services & Businesses",
+        subCategories: [
+            "Food & Dining", "Sweet Shops", "Restaurants", "Cafes", "Bakeries", "Catering Services",
+            "Daily Needs", "Grocery Stores", "Supermarkets", "Vegetable Markets", "Dairy Booths",
+            "Personal Care", "Salons", "Spas", "Gyms", "Yoga Centers", "Beauty Parlours",
+            "Repairs & Services", "Plumbers", "Electricians", "Carpenters", "Mechanics", "AC Repair",
+            "Health & Wellness", "Pharmacies", "Clinics", "Diagnostic Labs", "Veterinary Clinics",
+            "Other Services", "Laundry", "Dry Cleaners", "Photo Studios", "Internet Cafes", "Printing Shops"
+        ]
+    },
 
     // Trending Categories
     "room-heater": {

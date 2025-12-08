@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@sparticuz/chromium-min": "^141.0.0",
+    "dotenv": "^17.2.3",
     "jose": "^6.1.2",
     "lucide-react": "^0.554.0",
     "mongoose": "^9.0.0",
