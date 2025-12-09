@@ -26,8 +26,14 @@ export default function RegisterPage() {
                 body: JSON.stringify(formData)
             });
             const data = await res.json();
-            if (data.success) router.push('/login');
-            else setError(data.error || 'Registration failed');
+
+            if (data.success) {
+                // FIX: Use the server-provided redirect URL (e.g., '/seller/dashboard')
+                // This utilizes the auto-login cookie set by the registration API
+                router.push(data.redirectUrl || '/login');
+            } else {
+                setError(data.error || 'Registration failed');
+            }
         } catch (err) {
             setError('Something went wrong. Please try again.');
         } finally {
