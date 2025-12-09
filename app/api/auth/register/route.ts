@@ -21,7 +21,6 @@ export async function POST(req: Request) {
         const result = registerSchema.safeParse(body);
 
         if (!result.success) {
-            // FIX: Use .issues instead of .errors
             return NextResponse.json({ success: false, error: result.error.issues[0].message }, { status: 400 });
         }
 
@@ -39,10 +38,9 @@ export async function POST(req: Request) {
             name: validatedData.name,
             email: validatedData.email,
             phone: validatedData.phone,
-            role: 'seller'
+            role: 'seller' // Ensure 'seller' is added to your User model enum as discussed previously
         });
 
-        // 'as any' used to prevent strict type errors
         await Seller.create({
             name: validatedData.name,
             email: validatedData.email,
@@ -53,7 +51,13 @@ export async function POST(req: Request) {
             walletBalance: 500
         } as any);
 
-        const token = await signToken({ id: newUser._id.toString(), role: newUser.role, name: newUser.name });
+        // FIX: Changed 'id' to 'userId' to match middleware and login route
+        const token = await signToken({ 
+            userId: newUser._id.toString(), 
+            role: newUser.role, 
+            name: newUser.name 
+        });
+        
         const response = NextResponse.json({ success: true, message: "Registration successful", redirectUrl: '/seller/dashboard' });
 
         return createAuthCookie(response, token);
