@@ -33,15 +33,17 @@ export async function POST(req: Request) {
         const existingSeller = await Seller.findOne({ phone: validatedData.phone });
         if (existingSeller) return NextResponse.json({ success: false, error: "Seller already exists" }, { status: 409 });
 
-        // Create Records
+        // Create User Record (Global Directory)
         const newUser = await User.create({
             name: validatedData.name,
             email: validatedData.email,
             phone: validatedData.phone,
-            role: 'seller' // Ensure 'seller' is added to your User model enum as discussed previously
+            role: 'seller'
         });
 
-        await Seller.create({
+        // Create Seller Record (Business Data)
+        // CAPTURE the result in 'newSeller'
+        const newSeller = await Seller.create({
             name: validatedData.name,
             email: validatedData.email,
             phone: validatedData.phone,
@@ -51,13 +53,14 @@ export async function POST(req: Request) {
             walletBalance: 500
         } as any);
 
-        // FIX: Changed 'id' to 'userId' to match middleware and login route
+        // FIX: Use newSeller._id (NOT newUser._id) for the token
+        // This ensures the token works with the Seller Dashboard
         const token = await signToken({ 
-            userId: newUser._id.toString(), 
-            role: newUser.role, 
-            name: newUser.name 
+            userId: newSeller._id.toString(), 
+            role: 'seller', 
+            name: newSeller.name 
         });
-        
+
         const response = NextResponse.json({ success: true, message: "Registration successful", redirectUrl: '/seller/dashboard' });
 
         return createAuthCookie(response, token);
