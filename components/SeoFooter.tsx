@@ -88,11 +88,11 @@ const SeoFooter = async () => {
                         <div className="space-y-4">
                             <div className="flex items-start gap-3">
                                 <MapPin className="w-5 h-5 text-gray-500 mt-0.5 flex-shrink-0" />
-                                <span>123 Business Park, Noida, UP, India</span>
+                                <span>KK-101 Kavi Nagar Ghaziabad, UP, India</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Phone className="w-5 h-5 text-gray-500 flex-shrink-0" />
-                                <span>+91-98765-43210</span>
+                                <span>+91-8384049914</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Mail className="w-5 h-5 text-gray-500 flex-shrink-0" />
