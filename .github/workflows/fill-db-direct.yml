@@ -1,0 +1,31 @@
+name: Manual DB Fill (Direct)
+
+on:
+  workflow_dispatch: # ✅ This adds the "Run Workflow" button
+  schedule:
+    - cron: '0 */12 * * *' # Optional: Run every 12 hours automatically
+
+jobs:
+  fill-database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 # ✅ Allows running for up to 6 hours!
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Scraper Script
+        # This runs the script directly on GitHub, connecting to your MongoDB
+        run: npx tsx scripts/fill-db.ts
+        env:
+          # We need to pass the secret DB connection string here
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
