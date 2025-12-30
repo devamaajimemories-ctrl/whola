@@ -9,9 +9,10 @@ import { categoryData } from '@/lib/categoryData';
 import { toCompanySlug } from '@/lib/slugs';
 import { 
     ArrowLeft, MapPin, Star, ShieldCheck, 
-    CheckCircle, Phone, Lock, MessageCircle 
+    CheckCircle, Lock, MessageCircle 
 } from 'lucide-react';
-import EmptyState from '@/components/EmptyState';
+// EmptyState is no longer needed if we return 404
+// import EmptyState from '@/components/EmptyState'; 
 
 // ✅ VERCEL PRO SETTING: 5 Minutes Timeout
 export const maxDuration = 300; 
@@ -48,7 +49,7 @@ export default async function CategoryPage({ params }: Props) {
             { tags: { $in: [new RegExp(categoryName, 'i')] } }
         ]
     })
-    .limit(300) // ✅ SHOW ALL: Increased limit to 300
+    .limit(300) 
     .sort({ isVerified: -1, ratingAverage: -1 })
     .lean();
 
@@ -69,13 +70,19 @@ export default async function CategoryPage({ params }: Props) {
                     { tags: { $in: [new RegExp(categoryName, 'i')] } }
                 ]
             })
-            .limit(300) // ✅ SHOW ALL
+            .limit(300)
             .sort({ isVerified: -1, createdAt: -1 })
             .lean();
             
         } catch (error) {
             console.error(`⚠️ JIT Scrape Failed for ${categoryName}:`, error);
         }
+    }
+
+    // 🚨 FIX: Prevent Soft 404s
+    // If the category is still empty after scraping, return a true 404.
+    if (!sellers || sellers.length === 0) {
+        return notFound();
     }
 
     return (
@@ -116,76 +123,72 @@ export default async function CategoryPage({ params }: Props) {
                 </div>
 
                 {/* Seller Grid */}
-                {sellers.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {sellers.map((seller: any) => (
-                            <div key={seller._id.toString()} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-shadow flex flex-col h-full overflow-hidden group">
-                                
-                                {/* Card Body */}
-                                <div className="p-6 flex-1">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <h2 className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
-                                                <Link href={`/company/${toCompanySlug(seller.name, seller.city)}`}>
-                                                    {seller.name}
-                                                </Link>
-                                            </h2>
-                                            {seller.isVerified && (
-                                                <span className="inline-flex items-center gap-1 mt-1 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase">
-                                                    <CheckCircle size={10} /> Verified
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 shrink-0">
-                                            {seller.ratingAverage || 4.5} <Star size={10} fill="currentColor"/>
-                                        </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {sellers.map((seller: any) => (
+                        <div key={seller._id.toString()} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-shadow flex flex-col h-full overflow-hidden group">
+                            
+                            {/* Card Body */}
+                            <div className="p-6 flex-1">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-gray-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                                            <Link href={`/company/${toCompanySlug(seller.name, seller.city)}`}>
+                                                {seller.name}
+                                            </Link>
+                                        </h2>
+                                        {seller.isVerified && (
+                                            <span className="inline-flex items-center gap-1 mt-1 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase">
+                                                <CheckCircle size={10} /> Verified
+                                            </span>
+                                        )}
                                     </div>
-
-                                    <div className="flex items-start gap-2 text-sm text-gray-600 mb-4 min-h-[40px]">
-                                        <MapPin size={16} className="mt-0.5 shrink-0 text-gray-400" />
-                                        <span className="line-clamp-2">{seller.address || seller.city}</span>
-                                    </div>
-
-                                    {/* Categories Tags */}
-                                    <div className="flex flex-wrap gap-2">
-                                        <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
-                                            {seller.category}
-                                        </span>
+                                    <div className="bg-yellow-50 text-yellow-700 px-2 py-1 rounded text-xs font-bold flex items-center gap-1 shrink-0">
+                                        {seller.ratingAverage || 4.5} <Star size={10} fill="currentColor"/>
                                     </div>
                                 </div>
 
-                                {/* Card Footer */}
-                                <div className="p-4 bg-gray-50 border-t border-gray-100 mt-auto">
-                                    <div className="flex flex-col gap-2">
-                                        {/* Privacy Note */}
-                                        <p className="text-[10px] text-center text-gray-400 flex items-center justify-center gap-1">
-                                            <Lock size={10}/> Number hidden. Contact via Chat.
-                                        </p>
-                                        
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <Link 
-                                                href={`/company/${toCompanySlug(seller.name, seller.city)}`}
-                                                className="text-center bg-white border border-gray-300 text-gray-700 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors"
-                                            >
-                                                View
-                                            </Link>
-                                            {/* ✅ INTERNAL CONTACT: Links to /buyer/messages */}
-                                            <Link 
-                                                href={`/buyer/messages?sellerId=${seller._id}&source=category_page`}
-                                                className="flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm"
-                                            >
-                                                <MessageCircle size={16}/> Chat Now
-                                            </Link>
-                                        </div>
-                                    </div>
+                                <div className="flex items-start gap-2 text-sm text-gray-600 mb-4 min-h-[40px]">
+                                    <MapPin size={16} className="mt-0.5 shrink-0 text-gray-400" />
+                                    <span className="line-clamp-2">{seller.address || seller.city}</span>
                                 </div>
 
+                                {/* Categories Tags */}
+                                <div className="flex flex-wrap gap-2">
+                                    <span className="bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded">
+                                        {seller.category}
+                                    </span>
+                                </div>
                             </div>
-                        ))}
-                    </div>
-                ) : (
-                    <EmptyState />
-                )}
+
+                            {/* Card Footer */}
+                            <div className="p-4 bg-gray-50 border-t border-gray-100 mt-auto">
+                                <div className="flex flex-col gap-2">
+                                    {/* Privacy Note */}
+                                    <p className="text-[10px] text-center text-gray-400 flex items-center justify-center gap-1">
+                                        <Lock size={10}/> Number hidden. Contact via Chat.
+                                    </p>
+                                    
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Link 
+                                            href={`/company/${toCompanySlug(seller.name, seller.city)}`}
+                                            className="text-center bg-white border border-gray-300 text-gray-700 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 transition-colors"
+                                        >
+                                            View
+                                        </Link>
+                                        {/* ✅ INTERNAL CONTACT: Links to /buyer/messages */}
+                                        <Link 
+                                            href={`/buyer/messages?sellerId=${seller._id}&source=category_page`}
+                                            className="flex items-center justify-center gap-2 bg-blue-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm"
+                                        >
+                                            <MessageCircle size={16}/> Chat Now
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    ))}
+                </div>
             </div>
         </main>
     );
