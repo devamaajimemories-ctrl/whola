@@ -81,7 +81,7 @@ function writeCompressedSitemap(filename: string, urls: string[]) {
 
 // --- MAIN GENERATOR ---
 async function generate() {
-    console.log('🚀 Starting Smart Sitemap Generation...');
+    console.log('🚀 Starting Full Database Sitemap Generation...');
     
     if (!process.env.MONGODB_URI) throw new Error('❌ MONGODB_URI is missing');
     if (mongoose.connection.readyState === 0) {
@@ -108,12 +108,14 @@ async function generate() {
     sitemapFiles.push('sitemap-static.xml');
 
     // --------------------------------------------------
-    // 2. SELLERS (Active Only)
+    // 2. SELLERS (ALL - No Verification Check)
     // --------------------------------------------------
-    console.log('🔹 Fetching Verified Sellers...');
-    // ✅ Filter: Only Verified Sellers
-    const sellers = await Seller.find({ isVerified: true }).select('name city category tags updatedAt').lean();
+    console.log('🔹 Fetching ALL Sellers (Verified & Unverified)...');
     
+    // 🔥 CHANGE: Removed { isVerified: true } filter to fetch EVERYTHING
+    const sellers = await Seller.find({}).select('name city category tags updatedAt').lean();
+    console.log(`   👉 Found ${sellers.length} total sellers.`);
+
     let sellerUrls: string[] = [];
     let sellerFileCount = 1;
 
@@ -142,11 +144,13 @@ async function generate() {
     }
 
     // --------------------------------------------------
-    // 3. PRODUCTS (Approved Only)
+    // 3. PRODUCTS (ALL - No Approval Check)
     // --------------------------------------------------
-    console.log('🔹 Fetching Approved Products...');
-    // ✅ Filter: Only APPROVED products
-    const products = await Product.find({ status: 'APPROVED' }).select('slug updatedAt').lean();
+    console.log('🔹 Fetching ALL Products...');
+    
+    // 🔥 CHANGE: Removed { status: 'APPROVED' } filter
+    const products = await Product.find({}).select('slug updatedAt').lean();
+    console.log(`   👉 Found ${products.length} total products.`);
 
     let productUrls: string[] = [];
     let productFileCount = 1;
@@ -176,12 +180,11 @@ async function generate() {
     }
 
     // --------------------------------------------------
-    // 4. MARKET PAGES (Smart Filtering)
+    // 4. MARKET PAGES (Based on ALL Data)
     // --------------------------------------------------
-    console.log('🔹 Generating Smart Market Pages...');
+    console.log('🔹 Generating Smart Market Pages from ALL Data...');
     
     // ✅ STEP 1: Build a "Set" of valid combinations from the DB
-    // This tells us: "We have data for 'Pumps' in 'Mumbai'"
     const validCombinations = new Set<string>();
     
     console.log(`   Scanning ${sellers.length} sellers to find active markets...`);
@@ -203,9 +206,9 @@ async function generate() {
         }
     });
 
-    console.log(`   ✅ Found ${validCombinations.size} valid City+Category combinations.`);
+    console.log(`   ✅ Found ${validCombinations.size} valid City+Category combinations (including unverified data).`);
 
-    // ✅ STEP 2: Generate URLs ONLY if they exist in the Set
+    // ✅ STEP 2: Generate URLs
     let marketUrls: string[] = [];
     let marketFileCount = 1;
     
@@ -256,7 +259,7 @@ async function generate() {
     console.log('🔹 Generating Main Index...');
     fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), SITEMAP_INDEX_TEMPLATE(sitemapFiles));
 
-    console.log('🎉 SITEMAP COMPLETE!');
+    console.log('🎉 SITEMAP COMPLETE (ALL DATA INCLUDED)!');
     console.log(`👉 Main Index: ${BASE_URL}/sitemap.xml`);
     console.log(`👉 Total Files Generated: ${sitemapFiles.length}`);
     
