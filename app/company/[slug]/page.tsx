@@ -1,13 +1,14 @@
 import React from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation'; // ✅ Import notFound
 import dbConnect from '@/lib/db';
 import Seller from '@/lib/models/Seller';
 import Product from '@/lib/models/Product';
 import { scrapeAndSaveSellers } from '@/lib/scraper-service';
 import { 
     MapPin, ShieldCheck, Package, Star, Building2, Megaphone,
-    Store, ArrowRight, MessageCircle
+    Store, MessageCircle
 } from 'lucide-react';
 import { toCompanySlug } from '@/lib/slugs';
 
@@ -39,17 +40,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         ]
     }).select('name city businessType category').lean();
 
-    if (seller) {
-        const type = seller.businessType || seller.category || "Supplier";
+    if (!seller) {
         return {
-            title: `${seller.name} - Verified ${type} in ${seller.city}`,
-            description: `Get contact details for ${seller.name} in ${seller.city}. Leading ${type}. Connect for wholesale prices on YouthBharat.`,
+            title: 'Page Not Found',
+            description: 'The requested company profile could not be found.'
         };
     }
 
+    const type = seller.businessType || seller.category || "Supplier";
     return {
-        title: `${name} in ${cityName} - Business Profile & Contact`,
-        description: `View business details for ${name} in ${cityName}. Address, phone number, and wholesale reviews. Is this your business? Claim it now on YouthBharat.`,
+        title: `${seller.name} - Verified ${type} in ${seller.city}`,
+        description: `Get contact details for ${seller.name} in ${seller.city}. Leading ${type}. Connect for wholesale prices on YouthBharat.`,
     };
 }
 
@@ -77,33 +78,18 @@ export default async function CompanyProfile({ params }: Props) {
                 ]
             }).lean();
         } catch (e) {
-            console.error("Scrape failed, continuing with mock profile.");
+            console.error("Scrape failed, continuing with 404 check.");
         }
     }
 
+    // ⛔ CRITICAL FIX: If seller is still missing, RETURN 404.
+    // Do NOT generate a "Mock Profile". This prevents Soft 404s.
     if (!seller) {
-        console.log("⚠️ Scrape returned no data. Generating Smart Mock Profile.");
-        seller = {
-            _id: "temp-id",
-            name: urlName,
-            city: urlCity,
-            address: `${urlCity}, India`,
-            category: "Unverified Listing",
-            description: `Business listing for ${urlName} located in ${urlCity}. This profile is currently unclaimed on YouthBharat. Are you the owner? Claim this listing to update your catalog and receive wholesale inquiries directly.`,
-            images: [], 
-            isVerified: false,
-            ratingAverage: 0, 
-            ratingCount: 0,
-            createdAt: new Date().toISOString()
-        };
+        return notFound();
     }
-
-    const isMockProfile = seller._id === "temp-id";
 
     let products: any[] = [];
-    if (!isMockProfile) {
-        products = await Product.find({ sellerId: seller._id }).lean();
-    }
+    products = await Product.find({ sellerId: seller._id }).lean();
 
     const schemaType = "LocalBusiness";
     const jsonLd = {
@@ -123,9 +109,6 @@ export default async function CompanyProfile({ params }: Props) {
 
     return (
         <div className="bg-gray-50 min-h-screen pb-12">
-            {/* ⛔ VITAL FIX: NoIndex for Mock Profiles to prevent 'Thin Content' penalty */}
-            {isMockProfile && <meta name="robots" content="noindex, nofollow" />}
-            
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
             <div className="container mx-auto px-4 pt-8">
@@ -148,7 +131,7 @@ export default async function CompanyProfile({ params }: Props) {
                                 </span>
                             ) : (
                                 <span className="flex items-center gap-1 bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                                    <Store size={14} /> Unclaimed Listing
+                                    <Store size={14} /> Unverified Listing
                                 </span>
                             )}
                         </div>
@@ -187,11 +170,11 @@ export default async function CompanyProfile({ params }: Props) {
                             </p>
                             
                             <Link 
-                                href={isMockProfile ? "/post-requirement" : `/buyer/messages?sellerId=${seller._id}&source=company_profile`}
+                                href={`/buyer/messages?sellerId=${seller._id}&source=company_profile`}
                                 className="flex items-center justify-center gap-2 w-full bg-blue-600 hover:bg-blue-700 text-white text-center font-bold py-3 px-6 rounded-lg shadow-md transition-colors"
                             >
                                 <MessageCircle size={18} />
-                                {isMockProfile ? "Request Contact" : "Chat with Supplier"}
+                                Chat with Supplier
                             </Link>
                         </div>
                     </div>
@@ -232,21 +215,6 @@ export default async function CompanyProfile({ params }: Props) {
                         </div>
                     )}
                 </div>
-
-                {isMockProfile && (
-                    <div className="mt-12 p-6 bg-white rounded-xl shadow-sm border border-gray-200">
-                        <h3 className="text-lg font-bold text-gray-900 mb-4">Top Rated Alternatives in {urlCity}</h3>
-                        <p className="text-sm text-gray-600 mb-4">
-                            While {seller.name} is unverified, check out these top-rated suppliers for similar products:
-                        </p>
-                        <Link 
-                            href={`/market/${toCompanySlug(urlName)}/${toCompanySlug(urlCity)}`}
-                            className="text-blue-600 hover:underline font-medium flex items-center gap-1"
-                        >
-                            View Verified {urlName} Suppliers in {urlCity} <ArrowRight size={16}/>
-                        </Link>
-                    </div>
-                )}
             </div>
         </div>
     );

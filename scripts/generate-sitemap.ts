@@ -11,15 +11,28 @@ import { industrialProducts } from '../lib/industrialData';
 dotenv.config({ path: '.env.local' });
 
 // --- MONGOOSE MODELS ---
-const SellerSchema = new mongoose.Schema({ isVerified: Boolean, name: String, city: String, updatedAt: Date });
-const ProductSchema = new mongoose.Schema({ status: String, slug: String, updatedAt: Date });
+// We need these schemas to read the DB
+const SellerSchema = new mongoose.Schema({ 
+    isVerified: Boolean, 
+    name: String, 
+    city: String, 
+    category: String, 
+    tags: [String], 
+    updatedAt: Date 
+});
+const ProductSchema = new mongoose.Schema({ 
+    status: String, 
+    slug: String, 
+    updatedAt: Date 
+});
+
 const Seller = mongoose.models.Seller || mongoose.model('Seller', SellerSchema);
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
 
 // --- CONFIG ---
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://youthbharatwholesalemart.com';
 const PUBLIC_DIR = path.join(process.cwd(), 'public');
-const MAX_URLS_PER_FILE = 49000; // Safety cap (Google limit is 50k)
+const MAX_URLS_PER_FILE = 49000; // Google limit is 50k
 
 // --- HELPERS ---
 function toSlug(text: string) {
@@ -68,17 +81,19 @@ function writeCompressedSitemap(filename: string, urls: string[]) {
 
 // --- MAIN GENERATOR ---
 async function generate() {
-    console.log('🚀 Starting Compressed Sitemap Generation...');
+    console.log('🚀 Starting Smart Sitemap Generation...');
     
     if (!process.env.MONGODB_URI) throw new Error('❌ MONGODB_URI is missing');
-    await mongoose.connect(process.env.MONGODB_URI);
+    if (mongoose.connection.readyState === 0) {
+        await mongoose.connect(process.env.MONGODB_URI);
+    }
     console.log('✅ Connected to DB');
 
     const today = new Date().toISOString();
     const sitemapFiles: string[] = [];
 
     // --------------------------------------------------
-    // 1. STATIC PAGES (Small, so we keep it uncompressed .xml)
+    // 1. STATIC PAGES
     // --------------------------------------------------
     console.log('🔹 Generating Static Pages...');
     const staticUrls = [
@@ -89,19 +104,19 @@ async function generate() {
         URL_TEMPLATE(`${BASE_URL}/register`, today, 'monthly', '0.8'),
         URL_TEMPLATE(`${BASE_URL}/search`, today, 'weekly', '0.9'),
     ];
-    // Write plain XML for static (easier for humans to read)
     fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap-static.xml'), URL_SET_TEMPLATE_START + '\n' + staticUrls.join('\n') + URL_SET_TEMPLATE_END);
     sitemapFiles.push('sitemap-static.xml');
 
-
     // --------------------------------------------------
-    // 2. SELLERS (Compressed)
+    // 2. SELLERS (Active Only)
     // --------------------------------------------------
-    console.log('🔹 Generating Sellers...');
+    console.log('🔹 Fetching Verified Sellers...');
+    // ✅ Filter: Only Verified Sellers
+    const sellers = await Seller.find({ isVerified: true }).select('name city category tags updatedAt').lean();
+    
     let sellerUrls: string[] = [];
     let sellerFileCount = 1;
-    const sellers = await Seller.find({}).select('name city updatedAt').lean();
-    
+
     for (const seller of sellers) {
         if (!seller.name || !seller.city) continue;
 
@@ -126,14 +141,15 @@ async function generate() {
         sitemapFiles.push(fileName);
     }
 
+    // --------------------------------------------------
+    // 3. PRODUCTS (Approved Only)
+    // --------------------------------------------------
+    console.log('🔹 Fetching Approved Products...');
+    // ✅ Filter: Only APPROVED products
+    const products = await Product.find({ status: 'APPROVED' }).select('slug updatedAt').lean();
 
-    // --------------------------------------------------
-    // 3. PRODUCTS (Compressed)
-    // --------------------------------------------------
-    console.log('🔹 Generating Products...');
     let productUrls: string[] = [];
     let productFileCount = 1;
-    const products = await Product.find({}).select('slug updatedAt').lean();
 
     for (const product of products) {
         if (!product.slug) continue;
@@ -142,7 +158,7 @@ async function generate() {
             `${BASE_URL}/product/${product.slug}`,
             product.updatedAt ? new Date(product.updatedAt).toISOString() : today,
             'daily',
-            '0.7'
+            '0.9'
         ));
 
         if (productUrls.length >= MAX_URLS_PER_FILE) {
@@ -159,22 +175,45 @@ async function generate() {
         sitemapFiles.push(fileName);
     }
 
+    // --------------------------------------------------
+    // 4. MARKET PAGES (Smart Filtering)
+    // --------------------------------------------------
+    console.log('🔹 Generating Smart Market Pages...');
+    
+    // ✅ STEP 1: Build a "Set" of valid combinations from the DB
+    // This tells us: "We have data for 'Pumps' in 'Mumbai'"
+    const validCombinations = new Set<string>();
+    
+    console.log(`   Scanning ${sellers.length} sellers to find active markets...`);
+    
+    sellers.forEach((s: any) => {
+        if (s.city) {
+            const citySlug = toSlug(s.city);
+            
+            // Add their main category
+            if (s.category) {
+                validCombinations.add(`${toSlug(s.category)}|${citySlug}`);
+            }
+            // Add their tags (keywords)
+            if (s.tags && s.tags.length > 0) {
+                s.tags.forEach((tag: string) => {
+                    validCombinations.add(`${toSlug(tag)}|${citySlug}`);
+                });
+            }
+        }
+    });
 
-    // --------------------------------------------------
-    // 4. MARKET PAGES (Compressed - Massive List)
-    // --------------------------------------------------
-    console.log('🔹 Generating Market Pages (This may take a while)...');
+    console.log(`   ✅ Found ${validCombinations.size} valid City+Category combinations.`);
+
+    // ✅ STEP 2: Generate URLs ONLY if they exist in the Set
     let marketUrls: string[] = [];
     let marketFileCount = 1;
     
-    // Get Base Keywords
     const baseKeywords: string[] = [];
     industrialProducts.forEach(cat => {
         baseKeywords.push(...cat.products);
     });
 
-    console.log(`   ℹ️  Processing: ${baseKeywords.length} Keywords x ${ALL_LOCATIONS.length} Locations`);
-    
     for (const keyword of baseKeywords) {
         const keywordSlug = toSlug(keyword);
         if (!keywordSlug) continue;
@@ -183,22 +222,28 @@ async function generate() {
             const locationSlug = toSlug(location);
             if (!locationSlug) continue;
 
-            marketUrls.push(URL_TEMPLATE(
-                `${BASE_URL}/market/${keywordSlug}/${locationSlug}`,
-                today,
-                'monthly',
-                '0.6'
-            ));
+            // ⚠️ THE CHECK: Does this exist in our database?
+            const signature = `${keywordSlug}|${locationSlug}`;
+            
+            if (validCombinations.has(signature)) {
+                marketUrls.push(URL_TEMPLATE(
+                    `${BASE_URL}/market/${keywordSlug}/${locationSlug}`,
+                    today,
+                    'monthly',
+                    '0.7'
+                ));
 
-            if (marketUrls.length >= MAX_URLS_PER_FILE) {
-                const fileName = `sitemap-market-${marketFileCount}.xml.gz`;
-                writeCompressedSitemap(fileName, marketUrls);
-                sitemapFiles.push(fileName);
-                marketUrls = [];
-                marketFileCount++;
+                if (marketUrls.length >= MAX_URLS_PER_FILE) {
+                    const fileName = `sitemap-market-${marketFileCount}.xml.gz`;
+                    writeCompressedSitemap(fileName, marketUrls);
+                    sitemapFiles.push(fileName);
+                    marketUrls = [];
+                    marketFileCount++;
+                }
             }
         }
     }
+    
     if (marketUrls.length > 0) {
         const fileName = `sitemap-market-${marketFileCount}.xml.gz`;
         writeCompressedSitemap(fileName, marketUrls);
@@ -206,7 +251,7 @@ async function generate() {
     }
 
     // --------------------------------------------------
-    // 5. INDEX (The Main Map)
+    // 5. INDEX
     // --------------------------------------------------
     console.log('🔹 Generating Main Index...');
     fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), SITEMAP_INDEX_TEMPLATE(sitemapFiles));

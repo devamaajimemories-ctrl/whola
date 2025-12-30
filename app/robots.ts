@@ -1,3 +1,4 @@
+// app/robots.ts
 import { MetadataRoute } from 'next';
 
 export const dynamic = 'force-dynamic'; 
@@ -11,9 +12,10 @@ export default function robots(): MetadataRoute.Robots {
                 userAgent: '*',
                 allow: [
                     '/', 
-                    '/find/',       // ✅ CRITICAL: Allow the JIT "Trap" pages
-                    '/company/',    // ✅ Allow the Real DB pages
-                    '/market/',     // ✅ Allow Category Hubs
+                    '/find/',       
+                    '/company/',   
+                    '/product/',    // ✅ ADDED: Allow crawling of product pages
+                    '/market/',     
                     '/locations',
                     '/about'
                 ],
@@ -22,19 +24,18 @@ export default function robots(): MetadataRoute.Robots {
                     '/buyer/',
                     '/seller/',
                     '/api/',
-                    '/search?',     // ⛔ Block internal search parameters (duplicate content)
-                    '/*?*',         // ⛔ Block all query strings
+                    '/search?',     
+                    '/*?*',         
                     '/_next/',
                     '/private/',
                 ],
             },
-            // Optimize for Googlebot specifically
             {
                 userAgent: 'Googlebot',
-                allow: ['/find/', '/company/'],
-                crawlDelay: 1 // Optional: Be polite if server load is high
+                allow: ['/find/', '/company/', '/product/'], // ✅ ADDED here as well
+                crawlDelay: 1 
             }
         ],
-        sitemap: `${BASE_URL}/sitemap.xml`, // Points to the index generated above
+        sitemap: `${BASE_URL}/sitemap.xml`, 
     };
 }
